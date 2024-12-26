@@ -15,15 +15,17 @@ GridNode::GridNode(Eigen::Vector3i idx, Eigen::Vector3d coord)
     this->coord = coord;
     this->dir = Eigen::Vector3i::Zero();
 
-    gScore = inf;
-    fScore = inf;
+    g_score = inf;
+    f_score = inf;
     father = NULL;
 }
 
 // 初始化
-void AStarManager::gridmap_init(double _resolution, Eigen::Vector3d max_coord, Eigen::Vector3d min_coord, int max_x_idx, int max_y_idx, int max_z_idx)
+void AStarManager::gridmap_init(double resolution, Eigen::Vector3d max_coord, Eigen::Vector3d min_coord, int max_x_idx, int max_y_idx, int max_z_idx)
 {
     this->resolution = resolution;
+    inv_resolution = 1.0 / resolution; 
+    
     neighbor_ptr_set.clear();
     edge_cost_set.clear();
 
@@ -64,26 +66,47 @@ void AStarManager::gridmap_init(double _resolution, Eigen::Vector3d max_coord, E
 }
 
 // 返回某个栅格是否为障碍物栅格
-bool AStarManager::is_obstacle(Eigen::Vector3i idx)
+inline bool AStarManager::is_obstacle(Eigen::Vector3i idx)
 {
     uint8_t temp_is_out_of_range = idx(0)>=0 && idx(0)<max_x_idx && idx(1)>=0 && idx(1)<max_y_idx && idx(2)>=0 && idx(2)<max_z_idx;
     return temp_is_out_of_range && obstacle_map[idx(0)*max_yz_idx + idx(1)* max_z_idx + idx(2)];
 }
 
-void AStarManager::set_obstacle(Eigen::Vector3i idx)
+inline void AStarManager::set_obstacle(Eigen::Vector3i idx)
 {
     obstacle_map[idx(0)*max_yz_idx + idx(1)* max_z_idx + idx(2)] = 1;
+}
+
+inline Eigen::Vector3i AStarManager::coord2idx(Eigen::Vector3d coord)
+{
+    Eigen::Vector3i idx;
+    idx <<  std::min(std::max(int((coord(0) - min_x_coord) * inv_resolution), 0), max_x_idx - 1),
+            std::min(std::max(int((coord(1) - min_y_coord) * inv_resolution), 0), max_y_idx - 1),
+            std::min(std::max(int((coord(2) - min_z_coord) * inv_resolution), 0), max_z_idx - 1);                  
+    return idx;
+}
+
+inline Eigen::Vector3d AStarManager::idx2coord(Eigen::Vector3i idx)
+{
+    Eigen::Vector3d coord;
+    coord(0) = ((double)idx(0) + 0.5) * resolution + min_x_coord;
+    coord(1) = ((double)idx(1) + 0.5) * resolution + min_y_coord;
+    coord(2) = ((double)idx(2) + 0.5) * resolution + min_z_coord;
+    return coord;
+}
+
+// 启发式函数
+inline double AStarManager::heuristics(Eigen::Vector3d start_coord, Eigen::Vector3d goal_coord)
+{
+    return (start_coord - goal_coord).norm();
 }
 
 // 查找当前节点的邻居，进行处理后按规则push进优先级队列
 void AStarManager::A_star_expand_neighbors(GridNode* GridNodePtr)
 {
-    for (int i=-1; i<=1; i++)
-    {
-        for (int j=-1; j<=1; j++)
-        {
-            for (int k=-1; k <= 1; k++)
-            {
+    for (int i=-1; i<=1; i++){
+        for (int j=-1; j<=1; j++){
+            for (int k=-1; k <= 1; k++){
                 if (i==0 && j==0 && k==0)
                     continue;
                 Eigen::Vector3i temp_idx = GridNodePtr->idx + Eigen::Vector3i(i, j, k);
@@ -103,7 +126,71 @@ void AStarManager::A_star_expand_neighbors(GridNode* GridNodePtr)
 
 }
 
+void AStarManager::A_star_search(Eigen::Vector3d start_coord, Eigen::Vector3d goal_coord)
+{
+    ros::Time start_time = ros::Time::now();
+    Eigen::Vector3i start_idx = coord2idx(start_coord);
+    Eigen::Vector3i end_idx = coord2idx(goal_coord);
 
+    GridNode* start_ptr = new GridNode(start_idx, start_coord);
+    GridNode* end_ptr = new GridNode(end_idx, goal_coord);
+    GridNode* current_node = NULL;
+    open_list.clear();
+
+    start_ptr->coord = start_coord;
+    start_ptr->g_score = 0;
+    start_ptr->f_score = start_ptr->g_score + heuristics(start_ptr->coord, goal_coord);
+
+    GridNodeMap[start_idx[0]][start_idx[1]][start_idx[2]]->is_close = 1;
+
+    open_list.insert(std::make_pair(start_ptr->f_score, start_ptr));
+
+    while (!open_list.empty()) {
+        current_node = open_list.begin()->second;
+        open_list.erase(open_list.begin());
+        if (current_node->idx == end_idx){
+            
+            ros::Time end_time = ros::Time::now();
+            ROS_WARN("[A*]{sucess}  Time in A*  is %f ms, path cost if %f m", (end_time - start_time).toSec() * 1000.0, current_node->g_score);
+            return;
+        }
+        A_star_expand_neighbors(current_node);
+        for (int i = 0; i < neighbor_ptr_set.size(); i++)
+        {
+            if (neighbor_ptr_set[i]->g_score <= current_node->g_score + edge_cost_set[i])
+                continue;
+            else
+            {
+                if (neighbor_ptr_set[i]->g_score == inf)
+                {
+                    neighbor_ptr_set[i]->father = current_node;
+                    neighbor_ptr_set[i]->g_score = current_node->g_score + edge_cost_set[i];
+                    neighbor_ptr_set[i]->f_score = neighbor_ptr_set[i]->g_score + heuristics(neighbor_ptr_set[i]->coord, goal_coord);
+                    
+                    open_list.insert(std::make_pair(neighbor_ptr_set[i]->f_score, neighbor_ptr_set[i]));
+                }
+                else if (neighbor_ptr_set[i]->g_score > current_node->g_score + edge_cost_set[i])
+                {
+                    neighbor_ptr_set[i]->father = current_node;
+                    neighbor_ptr_set[i]->f_score = neighbor_ptr_set[i]->g_score + heuristics(neighbor_ptr_set[i]->coord, goal_coord);
+                    neighbor_ptr_set[i]->g_score = current_node->g_score + edge_cost_set[i];
+                }
+                current_node->is_close = 1;
+                
+            }
+        }
+
+
+
+
+
+
+
+    }
+
+    ros::Time end_time = ros::Time::now();
+
+}
 
 
 
