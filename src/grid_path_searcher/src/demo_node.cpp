@@ -14,8 +14,9 @@
 #include <visualization_msgs/MarkerArray.h>
 #include <visualization_msgs/Marker.h>
 
-#include "graph_searcher.h"
+//#include "graph_searcher.h"
 #include "backward.hpp"
+#include "A_star.h"
 
 using namespace std;
 using namespace Eigen;
@@ -39,10 +40,12 @@ int _max_x_id, _max_y_id, _max_z_id;
 ros::Subscriber _map_sub, _pts_sub;
 ros::Publisher  _grid_path_vis_pub, _debug_nodes_vis_pub, _closed_nodes_vis_pub, _open_nodes_vis_pub, _close_nodes_sequence_vis_pub, _grid_map_vis_pub;
 
-gridPathFinder * _path_finder = new gridPathFinder();
+//gridPathFinder * Astar_path_finder = new gridPathFinder();
+AStarManager * Astar_path_finder  = new AStarManager();
 
 void rcvWaypointsCallback(const nav_msgs::Path & wp);
 void rcvPointCloudCallBack(const sensor_msgs::PointCloud2 & pointcloud_map);
+void visGridPath( vector<Vector3d> nodes, bool is_use_jps );
 
 void rcvWaypointsCallback(const nav_msgs::Path & wp)
 {     
@@ -54,7 +57,10 @@ void rcvWaypointsCallback(const nav_msgs::Path & wp)
                  wp.poses[0].pose.position.y,
                  wp.poses[0].pose.position.z;
 
-    ROS_INFO("[jps_node] receive the way-points");
+    ROS_INFO("[A_star_node] receive the way-points");
+    Astar_path_finder->A_star_search(Eigen::Vector3d(0,0,0), target_pt);
+    auto grid_path = Astar_path_finder->get_path();
+    visGridPath(grid_path, false);
 }
 
 // 接受random_complex_generator发出的原始点云并转化为栅格地图
@@ -85,9 +91,9 @@ void rcvPointCloudCallBack(const sensor_msgs::PointCloud2 & pointcloud_map)
                     double inf_x = pt.x + x * _resolution;
                     double inf_y = pt.y + y * _resolution;
                     double inf_z = pt.z + z * _resolution;
-                    _path_finder->setObs(inf_x, inf_y, inf_z);
+                    Astar_path_finder->setObs(inf_x, inf_y, inf_z);
 
-                    Vector3d cor_inf = _path_finder->coordRounding(Vector3d(inf_x, inf_y, inf_z));
+                    Vector3d cor_inf = Astar_path_finder->coordRounding(Vector3d(inf_x, inf_y, inf_z));
 
                     pt_inf.x = cor_inf(0);
                     pt_inf.y = cor_inf(1);
@@ -146,8 +152,8 @@ int main(int argc, char** argv)
     _max_y_id = (int)(_y_size * _inv_resolution);
     _max_z_id = (int)(_z_size * _inv_resolution);
 
-    _path_finder  = new gridPathFinder();
-    _path_finder  -> initGridMap(_resolution, _map_lower, _map_upper, _max_x_id, _max_y_id, _max_z_id);
+    Astar_path_finder  -> gridmap_init(_resolution, _map_lower, _map_upper, _max_x_id, _max_y_id, _max_z_id);
+
 
     ros::Rate rate(100);
     bool status = ros::ok();
@@ -158,6 +164,58 @@ int main(int argc, char** argv)
         rate.sleep();
     }
 
-    delete _path_finder;
+    delete Astar_path_finder;
     return 0;
+}
+
+void visGridPath( vector<Vector3d> nodes, bool is_use_jps )
+{   
+    visualization_msgs::Marker node_vis; 
+    node_vis.header.frame_id = "world";
+    node_vis.header.stamp = ros::Time::now();
+    
+    if(is_use_jps)
+        node_vis.ns = "demo_node/jps_path";
+    else
+        node_vis.ns = "demo_node/astar_path";
+
+    node_vis.type = visualization_msgs::Marker::CUBE_LIST;
+    node_vis.action = visualization_msgs::Marker::ADD;
+    node_vis.id = 0;
+
+    node_vis.pose.orientation.x = 0.0;
+    node_vis.pose.orientation.y = 0.0;
+    node_vis.pose.orientation.z = 0.0;
+    node_vis.pose.orientation.w = 1.0;
+
+    if(is_use_jps){
+        node_vis.color.a = 1.0;
+        node_vis.color.r = 1.0;
+        node_vis.color.g = 0.0;
+        node_vis.color.b = 0.0;
+    }
+    else{
+        node_vis.color.a = 1.0;
+        node_vis.color.r = 0.0;
+        node_vis.color.g = 1.0;
+        node_vis.color.b = 0.0;
+    }
+
+
+    node_vis.scale.x = _resolution;
+    node_vis.scale.y = _resolution;
+    node_vis.scale.z = _resolution;
+
+    geometry_msgs::Point pt;
+    for(int i = 0; i < int(nodes.size()); i++)
+    {
+        Vector3d coord = nodes[i];
+        pt.x = coord(0);
+        pt.y = coord(1);
+        pt.z = coord(2);
+
+        node_vis.points.push_back(pt);
+    }
+
+    _grid_path_vis_pub.publish(node_vis);
 }
