@@ -72,6 +72,7 @@ inline bool AStarManager::is_obstacle(Eigen::Vector3i idx)
     return temp_is_out_of_range && obstacle_map[idx(0)*max_yz_idx + idx(1)* max_z_idx + idx(2)];
 }
 
+// 下面两个函数功能一样的，只是命名和输入不一样，一个输入是一维的索引，另一个是三维的索引，目的是适配rviz插件的接口
 void AStarManager::set_obstacle(Eigen::Vector3i idx)
 {
     obstacle_map[idx(0)*max_yz_idx + idx(1)* max_z_idx + idx(2)] = 1;
@@ -139,6 +140,7 @@ void AStarManager::A_star_expand_neighbors(GridNode* GridNodePtr)
 
 }
 
+// A*搜索
 void AStarManager::A_star_search(Eigen::Vector3d start_coord, Eigen::Vector3d goal_coord)
 {
     ros::Time start_time = ros::Time::now();
@@ -147,7 +149,7 @@ void AStarManager::A_star_search(Eigen::Vector3d start_coord, Eigen::Vector3d go
 
     GridNode* start_ptr = GridNodeMap[start_idx[0]][start_idx[1]][start_idx[2]];
     GridNode* end_ptr = GridNodeMap[end_idx[0]][end_idx[1]][end_idx[2]];
-    GridNode* current_node = NULL;
+    GridNode* current_node_ptr = NULL;
     open_list.clear();
 
     start_ptr->coord = start_coord;
@@ -160,36 +162,38 @@ void AStarManager::A_star_search(Eigen::Vector3d start_coord, Eigen::Vector3d go
 
     while (!open_list.empty()) {
 
+        // 注意要清除用于临时存储的容器
         neighbor_ptr_set.clear();
         edge_cost_set.clear();
-        current_node = open_list.begin()->second;
+        // 弹出当前节点并准备扩展
+        current_node_ptr = open_list.begin()->second;
         open_list.erase(open_list.begin());
-        current_node->is_close = 1;
+        current_node_ptr->is_close = 1;
 
-        if (current_node->idx == end_idx){
-            final_node_ptr = current_node;
+        if (current_node_ptr->idx == end_idx){
+            final_node_ptr = current_node_ptr;
             ros::Time end_time = ros::Time::now();
-            ROS_WARN("[A*]{sucess}  Time in A*  is %f ms, path cost if %f m", (end_time - start_time).toSec() * 1000.0, current_node->g_score);
+            ROS_WARN("[A*]{sucess}  Time in A*  is %f ms, path cost if %f m", (end_time - start_time).toSec() * 1000.0, current_node_ptr->g_score);
             return;
         }
-        A_star_expand_neighbors(current_node);
+        A_star_expand_neighbors(current_node_ptr);
         for (int i = 0; i < neighbor_ptr_set.size(); i++)
         {
-            if (neighbor_ptr_set[i]->g_score <= current_node->g_score + edge_cost_set[i])
+            if (neighbor_ptr_set[i]->g_score <= current_node_ptr->g_score + edge_cost_set[i])
                 continue;
             else
             {
                 if (neighbor_ptr_set[i]->g_score == inf)
                 {
-                    neighbor_ptr_set[i]->father = current_node;
-                    neighbor_ptr_set[i]->g_score = current_node->g_score + edge_cost_set[i];
+                    neighbor_ptr_set[i]->father = current_node_ptr;
+                    neighbor_ptr_set[i]->g_score = current_node_ptr->g_score + edge_cost_set[i];
                     neighbor_ptr_set[i]->f_score = neighbor_ptr_set[i]->g_score + heuristics(neighbor_ptr_set[i]->coord, goal_coord);
                     open_list.insert(std::make_pair(neighbor_ptr_set[i]->f_score, neighbor_ptr_set[i]));
                 }
-                else if (neighbor_ptr_set[i]->g_score > current_node->g_score + edge_cost_set[i])
+                else if (neighbor_ptr_set[i]->g_score > current_node_ptr->g_score + edge_cost_set[i])
                 {
-                    neighbor_ptr_set[i]->father = current_node;
-                    neighbor_ptr_set[i]->g_score = current_node->g_score + edge_cost_set[i];
+                    neighbor_ptr_set[i]->father = current_node_ptr;
+                    neighbor_ptr_set[i]->g_score = current_node_ptr->g_score + edge_cost_set[i];
                     neighbor_ptr_set[i]->f_score = neighbor_ptr_set[i]->g_score + heuristics(neighbor_ptr_set[i]->coord, goal_coord);
                 }               
                 
@@ -198,7 +202,7 @@ void AStarManager::A_star_search(Eigen::Vector3d start_coord, Eigen::Vector3d go
     }
 }
 
-
+// 路径回溯
 std::vector<Eigen::Vector3d> AStarManager::get_path()
 {
     std::vector<Eigen::Vector3d> path;
@@ -212,10 +216,11 @@ std::vector<Eigen::Vector3d> AStarManager::get_path()
         ptr = ptr->father;
     }  
     std::reverse(path.begin(), path.end());
-
     return path;
 }
 
+
+// 测试
 Eigen::Vector3d AStarManager::coordRounding(const Eigen::Vector3d &coord)
 {
     return idx2coord(coord2idx(coord));

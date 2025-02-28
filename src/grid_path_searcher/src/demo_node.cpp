@@ -58,7 +58,7 @@ void rcvWaypointsCallback(const nav_msgs::Path & wp)
                  wp.poses[0].pose.position.z;
 
     ROS_INFO("[A_star_node] receive the way-points");
-    Astar_path_finder->A_star_search(Eigen::Vector3d(0,0,0), target_pt);
+    Astar_path_finder->A_star_search(Eigen::Vector3d(0,0,2), target_pt);
     auto grid_path = Astar_path_finder->get_path();
     visGridPath(grid_path, false);
 }
@@ -152,7 +152,7 @@ int main(int argc, char** argv)
     _max_y_id = (int)(_y_size * _inv_resolution);
     _max_z_id = (int)(_z_size * _inv_resolution);
 
-    Astar_path_finder  -> gridmap_init(_resolution, _map_lower, _map_upper, _max_x_id, _max_y_id, _max_z_id);
+    Astar_path_finder -> gridmap_init(_resolution, _map_lower, _map_upper, _max_x_id, _max_y_id, _max_z_id);
 
 
     ros::Rate rate(100);

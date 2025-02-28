@@ -58,67 +58,67 @@ void RandomMapGenerate()
    pcl::PointXYZ pt_random;
 
    // firstly, we put some circles
-   for(int i = 0; i < _cir_num; i ++)
-   {
-      double x0, y0, z0, R;
-      std::vector<Vector3d> circle_set;
+   // for(int i = 0; i < _cir_num; i ++)
+   // {
+   //    double x0, y0, z0, R;
+   //    std::vector<Vector3d> circle_set;
 
-      x0   = rand_x_circle(eng);
-      y0   = rand_y_circle(eng);
-      z0   = rand_h(eng) / 2.0;  
-      R    = rand_r_circle(eng);
+   //    x0   = rand_x_circle(eng);
+   //    y0   = rand_y_circle(eng);
+   //    z0   = rand_h(eng) / 2.0;  
+   //    R    = rand_r_circle(eng);
 
-      if(sqrt( pow(x0-_init_x, 2) + pow(y0-_init_y, 2) ) < 2.0 ) 
-         continue;
+   //    if(sqrt( pow(x0-_init_x, 2) + pow(y0-_init_y, 2) ) < 2.0 ) 
+   //       continue;
 
-      double a, b;
-      a = rand_ellipse_c(eng);
-      b = rand_ellipse_c(eng);
+   //    double a, b;
+   //    a = rand_ellipse_c(eng);
+   //    b = rand_ellipse_c(eng);
 
-      double x, y, z;
-      Vector3d pt3, pt3_rot;
-      for(double theta = -M_PI; theta < M_PI; theta += 0.025)
-      {  
-         x = a * cos(theta) * R;
-         y = b * sin(theta) * R;
-         z = 0;
-         pt3 << x, y, z;
-         circle_set.push_back(pt3);
-      }
-      // Define a random 3d rotation matrix
-      Matrix3d Rot;
-      double roll,  pitch, yaw;
-      double alpha, beta,  gama;
-      roll  = rand_roll(eng); // alpha
-      pitch = rand_pitch(eng); // beta
-      yaw   = rand_yaw(eng); // gama
+   //    double x, y, z;
+   //    Vector3d pt3, pt3_rot;
+   //    for(double theta = -M_PI; theta < M_PI; theta += 0.025)
+   //    {  
+   //       x = a * cos(theta) * R;
+   //       y = b * sin(theta) * R;
+   //       z = 0;
+   //       pt3 << x, y, z;
+   //       circle_set.push_back(pt3);
+   //    }
+   //    // Define a random 3d rotation matrix
+   //    Matrix3d Rot;
+   //    double roll,  pitch, yaw;
+   //    double alpha, beta,  gama;
+   //    roll  = rand_roll(eng); // alpha
+   //    pitch = rand_pitch(eng); // beta
+   //    yaw   = rand_yaw(eng); // gama
 
-      alpha = roll;
-      beta  = pitch;
-      gama  = yaw;
+   //    alpha = roll;
+   //    beta  = pitch;
+   //    gama  = yaw;
 
-      double p = rand_num(eng);
-      if(p < 0.5)
-      {
-         beta = M_PI / 2.0;
-         gama = M_PI / 2.0;
-      }
+   //    double p = rand_num(eng);
+   //    if(p < 0.5)
+   //    {
+   //       beta = M_PI / 2.0;
+   //       gama = M_PI / 2.0;
+   //    }
 
-      Rot << cos(alpha) * cos(gama)  - cos(beta) * sin(alpha) * sin(gama), - cos(beta) * cos(gama) * sin(alpha) - cos(alpha) * sin(gama),   sin(alpha) * sin(beta),
-             cos(gama)  * sin(alpha) + cos(alpha) * cos(beta) * sin(gama),   cos(alpha) * cos(beta) * cos(gama) - sin(alpha) * sin(gama), - cos(alpha) * sin(beta),        
-             sin(beta)  * sin(gama),                                         cos(gama) * sin(beta),                                         cos(beta);
+   //    Rot << cos(alpha) * cos(gama)  - cos(beta) * sin(alpha) * sin(gama), - cos(beta) * cos(gama) * sin(alpha) - cos(alpha) * sin(gama),   sin(alpha) * sin(beta),
+   //           cos(gama)  * sin(alpha) + cos(alpha) * cos(beta) * sin(gama),   cos(alpha) * cos(beta) * cos(gama) - sin(alpha) * sin(gama), - cos(alpha) * sin(beta),        
+   //           sin(beta)  * sin(gama),                                         cos(gama) * sin(beta),                                         cos(beta);
 
-      for(auto pt: circle_set)
-      {
-         pt3_rot = Rot * pt;
-         pt_random.x = pt3_rot(0) + x0 + 0.001;
-         pt_random.y = pt3_rot(1) + y0 + 0.001;
-         pt_random.z = pt3_rot(2) + z0 + 0.001;
+   //    for(auto pt: circle_set)
+   //    {
+   //       pt3_rot = Rot * pt;
+   //       pt_random.x = pt3_rot(0) + x0 + 0.001;
+   //       pt_random.y = pt3_rot(1) + y0 + 0.001;
+   //       pt_random.z = pt3_rot(2) + z0 + 0.001;
 
-         if(pt_random.z >= 0.0)
-            cloudMap.points.push_back( pt_random );
-      }
-   }
+   //       if(pt_random.z >= 0.0)
+   //          cloudMap.points.push_back( pt_random );
+   //    }
+   // }
 
    bool is_kdtree_empty = false;
    if(cloudMap.points.size() > 0)
