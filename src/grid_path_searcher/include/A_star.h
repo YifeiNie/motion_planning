@@ -29,7 +29,9 @@ struct GridNode
 class AStarManager
 {
 private: 
-    
+    double path_resolution;
+    double delta_t;
+
     GridNode ****GridNodeMap;
     uint8_t *obstacle_map;     // 一个三维映射到一维的数组，存储的0或1表示当前索引的栅格是否有障碍物
     std::multimap<double, GridNode*> open_list;
@@ -56,7 +58,8 @@ private:
     inline double heuristics(Eigen::Vector3d start_coord, Eigen::Vector3d goal_coord);
 
 public:
-    void gridmap_init(double resolution, Eigen::Vector3d max_coord, Eigen::Vector3d min_coord, int max_x_idx, int max_y_idx, int max_z_idx);
+
+    void init(ros::NodeHandle &nh, double resolution, Eigen::Vector3d max_coord, Eigen::Vector3d min_coord, int max_x_idx, int max_y_idx, int max_z_idx);
     inline Eigen::Vector3i coord2idx(Eigen::Vector3d coord);
     inline Eigen::Vector3d idx2coord(Eigen::Vector3i idx);
     void set_obstacle(Eigen::Vector3i idx);
@@ -66,7 +69,9 @@ public:
     Eigen::Vector3d coordRounding(const Eigen::Vector3d &coord);
 
     void setObs(const double coord_x, const double coord_y, const double coord_z);
-    
+    inline double calculate_d(const Eigen::Vector3d point_insert,const Eigen:: Vector3d point_st,const Eigen::Vector3d point_end);
+    std::vector<Eigen::Vector3d> path_simplify(const std::vector<Eigen::Vector3d> &path);
+    int safeCheck(Eigen::MatrixXd polyCoeff, Eigen::VectorXd time);
 };
 
 #endif

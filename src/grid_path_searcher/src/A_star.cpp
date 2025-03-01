@@ -21,8 +21,11 @@ GridNode::GridNode(Eigen::Vector3i idx, Eigen::Vector3d coord)
 }
 
 // 初始化
-void AStarManager::gridmap_init(double resolution, Eigen::Vector3d min_coord, Eigen::Vector3d max_coord, int max_x_idx, int max_y_idx, int max_z_idx)
+void AStarManager::init(ros::NodeHandle &nh, double resolution, Eigen::Vector3d min_coord, Eigen::Vector3d max_coord, int max_x_idx, int max_y_idx, int max_z_idx)
 {
+    nh.param("path/resolution", path_resolution, 0.2);
+    nh.param("path/delta_t", delta_t, path_resolution/1.0);
+
     this->resolution = resolution;
     inv_resolution = 1.0 / resolution; 
     
@@ -219,6 +222,69 @@ std::vector<Eigen::Vector3d> AStarManager::get_path()
     return path;
 }
 
+// 简化路径
+std::vector<Eigen::Vector3d> AStarManager::path_simplify(const std::vector<Eigen::Vector3d> &path)
+{
+    // 计算全部路径点到路径首尾连线的距离最大值
+    double dmax = 0;
+    double d;
+    int index = 0;
+    int end = path.size();
+    for (int i = 1; i < end - 1; i++) {
+        d = calculate_d(path[i], path[0], path[end - 1]);
+        if (d > dmax) {
+            index = i;
+            dmax = d;
+        }
+    }
+    // 拆为两段
+    std::vector<Eigen::Vector3d> subPath1;
+    int j = 0;
+    while(j<index+1){
+        subPath1.push_back(path[j]);
+        j++;
+    }
+    std::vector<Eigen::Vector3d> subPath2;
+    while(j < int(path.size())){
+        subPath2.push_back(path[j]);
+        j++;
+    }
+    // 递归调用直到满足要求
+    std::vector<Eigen::Vector3d> recPath1;
+    std::vector<Eigen::Vector3d> recPath2;
+    std::vector<Eigen::Vector3d> resultPath;
+    if(dmax>path_resolution)
+    {
+        recPath1 = path_simplify(subPath1);
+        recPath2 = path_simplify(subPath2);
+    for(int i = 0; i < int(recPath1.size()); i++) {
+        resultPath.push_back(recPath1[i]);
+    }
+        for(int i = 0; i < int(recPath2.size()); i++) {
+        resultPath.push_back(recPath2[i]);
+    }
+    }else {
+        if(path.size() > 1){
+            resultPath.push_back(path[0]);
+            resultPath.push_back(path[end-1]);
+        }
+        else {
+            resultPath.push_back(path[0]);
+        }       
+    }
+    return resultPath;
+}
+
+inline double AStarManager::calculate_d(const Eigen::Vector3d insert, const Eigen::Vector3d start, const Eigen::Vector3d end)
+{
+    Eigen::Vector3d line1 = end - start;
+    Eigen::Vector3d line2 = insert - start;
+    return double(line2.cross(line1).norm()/line1.norm());
+}
+
+int AStarManager::safeCheck(Eigen::MatrixXd polyCoeff, Eigen::VectorXd time) {
+
+}
 
 // 测试
 Eigen::Vector3d AStarManager::coordRounding(const Eigen::Vector3d &coord)

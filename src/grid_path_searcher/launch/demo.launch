@@ -23,6 +23,7 @@
         <param name="planning/start_x" value="$(arg start_x)"/>
         <param name="planning/start_y" value="$(arg start_y)"/>
         <param name="planning/start_z" value="$(arg start_z)"/>
+        <param name="path/resolution"  value="0.3"/>
     </node>
 
     <node pkg ="grid_path_searcher" name ="random_complex" type ="random_complex" output = "screen">
