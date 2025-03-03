@@ -17,6 +17,7 @@
 //#include "graph_searcher.h"
 #include "backward.hpp"
 #include "A_star.h"
+#include "trajectory_optimization.h"
 
 using namespace std;
 using namespace Eigen;
@@ -42,6 +43,7 @@ ros::Publisher  _grid_path_vis_pub, _debug_nodes_vis_pub, _closed_nodes_vis_pub,
 
 //gridPathFinder * Astar_path_finder = new gridPathFinder();
 AStarManager * Astar_path_finder  = new AStarManager();
+Traj_opt * traj_opt = new Traj_opt();
 
 void rcvWaypointsCallback(const nav_msgs::Path & wp);
 void rcvPointCloudCallBack(const sensor_msgs::PointCloud2 & pointcloud_map);

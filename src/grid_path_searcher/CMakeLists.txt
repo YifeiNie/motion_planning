@@ -7,6 +7,7 @@ find_package(catkin REQUIRED COMPONENTS
     std_msgs
     nav_msgs
     visualization_msgs 
+    trajectory_optimization
 )
 
 find_package(Eigen3 REQUIRED)

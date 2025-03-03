@@ -1,11 +1,13 @@
 #include "trajectory_optimization.h"
 #include "cmath"
 
-
+double max_vel, max_acc;
 void Traj_opt::init(ros::NodeHandle &nh)
 {
-    
+    max_vel = nh.param("Opt/max_vel", 1.0);
+    max_acc = nh.param("Opt/max_acc", 1.0);
 }
+
 int Traj_opt::factorial(int x)
 {
     int fac = 1;
@@ -20,26 +22,32 @@ Eigen::VectorXd Traj_opt::time_allocation(Eigen::MatrixXd Path)  // 时间分配
     Eigen::VectorXd time(Path.rows() - 1);
     Eigen::MatrixXd piece;
     double dist;
-    const double t = _Vel / _Acc;
-    const double d = 0.5 * _Acc * t * t;
+    const double t = max_vel / max_acc;
+    const double d = 0.5 * max_acc * t * t;
     //使用梯形曲线分配时间
     for(int i=0;i<int(time.size());i++)
     {
     piece= Path.row(i+1)-Path.row(i);
     dist = piece.norm();
         if (dist < d + d) {
-            time(i)= 2.0 * sqrt(dist / _Acc);
+            time(i)= 2.0 * sqrt(dist / max_acc);
         }
         else {
-            time(i) =2.0 * t + (dist - 2.0 * d) / _Vel;
+            time(i) =2.0 * t + (dist - 2.0 * d) / max_vel;
         }
     }
     return time;
 }
+
 /**
  * @brief 求解多项式轨迹的系数
  * @param order 要最小化位置的几阶导数
- * @param data 第二个加数
+ * @param data 数据矩阵容器，容器中元素个数表示轴的数量，每个轴的数据矩阵格式如下，一个"'"表示一阶导数
+ *              p0    p1    p2    ....    pn
+ *              p0'   p1'   p2'   ....    pn'
+ *              p0''  p1''  p2''  ....    pn''
+ *              .     .     .     ....    .
+ * @param time 每一段轨迹的预设时间
  * @return 多项式轨迹的系数矩阵容器
  */
 std::vector<Eigen::MatrixXd> Traj_opt::traj_gen(int order, 
