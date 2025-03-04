@@ -1,11 +1,13 @@
 #include "trajectory_optimization.h"
 #include "cmath"
 
-double max_vel, max_acc;
+
 void Traj_opt::init(ros::NodeHandle &nh)
 {
+    visualizer = std::make_unique<Visualizer>(nh);
     max_vel = nh.param("Opt/max_vel", 1.0);
     max_acc = nh.param("Opt/max_acc", 1.0);
+    order = nh.param("Opt/order", 3);
 }
 
 int Traj_opt::factorial(int x)
@@ -17,31 +19,59 @@ int Traj_opt::factorial(int x)
     return fac;
 }
 
-Eigen::VectorXd Traj_opt::time_allocation(Eigen::MatrixXd Path)  // 时间分配
+Eigen::VectorXd Traj_opt::time_allocation(std::vector<Eigen::Vector3d> &path)  // 时间分配
 {
+
+    int rows = path.size();
+    int cols = path[0].size();
+    Eigen::MatrixXd Path(rows, cols);
+    for (int i = 0; i < rows; ++i) {
+        Path.row(i) = path[i].transpose(); // 转置成行向量并赋值
+    }
+
     Eigen::VectorXd time(Path.rows() - 1);
     Eigen::MatrixXd piece;
     double dist;
     const double t = max_vel / max_acc;
     const double d = 0.5 * max_acc * t * t;
     //使用梯形曲线分配时间
-    for(int i=0;i<int(time.size());i++)
+    for(int i = 0; i < int(time.size()); i++)
     {
-    piece= Path.row(i+1)-Path.row(i);
+    piece = Path.row(i + 1) - Path.row(i);
     dist = piece.norm();
         if (dist < d + d) {
             time(i)= 2.0 * sqrt(dist / max_acc);
         }
         else {
-            time(i) =2.0 * t + (dist - 2.0 * d) / max_vel;
+            time(i) = 2.0 * t + (dist - 2.0 * d) / max_vel;
         }
     }
     return time;
 }
 
+std::vector<Eigen::MatrixXd> Traj_opt::data_config(std::vector<Eigen::Vector3d> &path)
+{
+    int axis = path[0].rows();
+    int seg_num = path.size() - 1;
+    std::vector<Eigen::MatrixXd> data;
+
+    Eigen::Matrix3Xd mat(3, path.size());
+    for (size_t i = 0; i < path.size(); ++i)
+    {
+        mat.col(i) = path[i];
+    }
+
+    for (int i = 0; i < axis; ++i) {
+        Eigen::MatrixXd temp = Eigen::MatrixXd::Zero(order, seg_num + 1);
+        temp.row(0) = mat.row(i);
+        data.emplace_back(temp);
+    }
+
+    return data;
+}
+
 /**
  * @brief 求解多项式轨迹的系数
- * @param order 要最小化位置的几阶导数
  * @param data 数据矩阵容器，容器中元素个数表示轴的数量，每个轴的数据矩阵格式如下，一个"'"表示一阶导数
  *              p0    p1    p2    ....    pn
  *              p0'   p1'   p2'   ....    pn'
@@ -50,11 +80,11 @@ Eigen::VectorXd Traj_opt::time_allocation(Eigen::MatrixXd Path)  // 时间分配
  * @param time 每一段轨迹的预设时间
  * @return 多项式轨迹的系数矩阵容器
  */
-std::vector<Eigen::MatrixXd> Traj_opt::traj_gen(int order, 
-                            const std::vector<Eigen::MatrixXd> &data,
-                            const Eigen::VectorXd &time)
+std::vector<Eigen::VectorXd> Traj_opt::traj_gen(const std::vector<Eigen::MatrixXd> &data, 
+                                                const Eigen::VectorXd &time)
 {
-    std::vector<Eigen::MatrixXd> P_coef;
+    std::vector<Eigen::MatrixXd> P_coef_mat;
+    std::vector<Eigen::VectorXd> P_coef_vec;
     int axis = data.size();
     int time_seg_num = time.size();
 
@@ -185,11 +215,53 @@ std::vector<Eigen::MatrixXd> Traj_opt::traj_gen(int order,
             temp_mat.row(j) = P.segment(j * p_num, p_num).transpose();
         }
 
-        P_coef.emplace_back(temp_mat);
-
+        P_coef_mat.push_back(temp_mat);
+        P_coef_vec.push_back(P);
     }
-    return P_coef;
+    return P_coef_vec;
 
+}
+
+void Traj_opt::Visualize(std::vector<Eigen::VectorXd> P_coef_vec, 
+                        std::vector<Eigen::Vector3d> &path, 
+                        Eigen::VectorXd &time)
+{
+    int seg_P_num = 2 * order;
+    
+    int num_segments = P_coef_vec[0].size() / seg_P_num; 
+    Eigen::MatrixX3d coefficientMatrix = Eigen::MatrixXd::Zero(seg_P_num * num_segments, 3);
+    for (int i = 0; i < num_segments; i++) {
+        Eigen::VectorXd segment = P_coef_vec[0].segment(i * seg_P_num, seg_P_num);
+        segment.reverseInPlace();
+        coefficientMatrix.col(0).segment(i * seg_P_num, seg_P_num) = segment;
+    }
+    for (int i = 0; i < num_segments; i++) {
+        Eigen::VectorXd segment = P_coef_vec[1].segment(i * seg_P_num, seg_P_num);
+        segment.reverseInPlace();
+        coefficientMatrix.col(1).segment(i * seg_P_num, seg_P_num) = segment;
+    }
+    for (int i = 0; i < num_segments; i++) {
+        Eigen::VectorXd segment = P_coef_vec[2].segment(i * seg_P_num, seg_P_num);
+        segment.reverseInPlace();
+        coefficientMatrix.col(2).segment(i * seg_P_num, seg_P_num) = segment;
+    }
+    
+    traj.clear();
+    traj.reserve(num_segments);
+    for (int i = 0; i < num_segments; i++)
+    {
+        traj.emplace_back(time(i),
+                            coefficientMatrix.block<6, 3>(6 * i, 0).transpose().rowwise().reverse());
+    }
+
+
+    int rows = path.size();
+    int cols = path[0].size();
+    Eigen::MatrixXd Path(rows, cols);
+    for (int i = 0; i < rows; ++i) {
+        Path.row(i) = path[i].transpose(); // 转置成行向量并赋值
+    }
+    visualizer->visualize(traj, Path);
 }
 
 

@@ -45,6 +45,7 @@ ros::Publisher  _grid_path_vis_pub, _debug_nodes_vis_pub, _closed_nodes_vis_pub,
 AStarManager * Astar_path_finder  = new AStarManager();
 Traj_opt * traj_opt = new Traj_opt();
 
+
 void rcvWaypointsCallback(const nav_msgs::Path & wp);
 void rcvPointCloudCallBack(const sensor_msgs::PointCloud2 & pointcloud_map);
 void visGridPath( vector<Vector3d> nodes, bool is_use_jps );
@@ -61,10 +62,16 @@ void rcvWaypointsCallback(const nav_msgs::Path & wp)
 
     ROS_INFO("[A_star_node] receive the way-points");
     Astar_path_finder->A_star_search(Eigen::Vector3d(0, 0, 2), target_pt);
-    auto grid_path = Astar_path_finder->get_path();
+    std::vector<Eigen::Vector3d> grid_path = Astar_path_finder->get_path();
     // visGridPath(grid_path, false);
-    auto path_main_point = Astar_path_finder->path_simplify(grid_path);
-    visGridPath(path_main_point, true);
+    std::cout << "00000000000000000000000" << std::endl;
+    std::vector<Eigen::Vector3d> path_main_point = Astar_path_finder->path_simplify(grid_path);
+    std::vector<Eigen::MatrixXd> data = traj_opt->data_config(path_main_point);
+    Eigen::VectorXd time = traj_opt->time_allocation(path_main_point);
+    std::vector<Eigen::VectorXd> poly_coeff = traj_opt->traj_gen(data, time);
+    // traj_opt->Visualize(poly_coeff, path_main_point, time);
+    std::cout << "111111111111111111111111111" << std::endl;
+    // visGridPath(path_main_point, true);
 }
 
 // 接受random_complex_generator发出的原始点云并转化为栅格地图
@@ -125,7 +132,6 @@ int main(int argc, char** argv)
 {
     ros::init(argc, argv, "demo_node");
     ros::NodeHandle nh("~");
-
     _map_sub  = nh.subscribe( "map",       1, rcvPointCloudCallBack );
     _pts_sub  = nh.subscribe( "waypoints", 1, rcvWaypointsCallback );
 
@@ -157,7 +163,7 @@ int main(int argc, char** argv)
     _max_z_id = (int)(_z_size * _inv_resolution);
 
     Astar_path_finder -> init(nh, _resolution, _map_lower, _map_upper, _max_x_id, _max_y_id, _max_z_id);
-
+    traj_opt->init(nh);
 
     ros::Rate rate(100);
     bool status = ros::ok();

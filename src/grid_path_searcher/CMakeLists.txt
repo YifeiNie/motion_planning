@@ -44,4 +44,5 @@ add_executable ( random_complex
 
 target_link_libraries( random_complex
     ${catkin_LIBRARIES}
-    ${PCL_LIBRARIES} )  
+    ${PCL_LIBRARIES}
+    trajectory_optimization )  
