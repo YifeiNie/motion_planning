@@ -23,8 +23,8 @@ GridNode::GridNode(Eigen::Vector3i idx, Eigen::Vector3d coord)
 // 初始化
 void AStarManager::init(ros::NodeHandle &nh, double resolution, Eigen::Vector3d min_coord, Eigen::Vector3d max_coord, int max_x_idx, int max_y_idx, int max_z_idx)
 {
-    nh.param("path/resolution", path_resolution, 0.2);
-    nh.param("path/delta_t", delta_t, path_resolution/1.0);
+    nh.param("path/resolution", path_resolution, 0.1);
+    nh.param("path/delta_t", delta_t, path_resolution / 2.0);
 
     this->resolution = resolution;
     inv_resolution = 1.0 / resolution; 

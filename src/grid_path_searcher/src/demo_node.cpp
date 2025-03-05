@@ -50,6 +50,15 @@ void rcvWaypointsCallback(const nav_msgs::Path & wp);
 void rcvPointCloudCallBack(const sensor_msgs::PointCloud2 & pointcloud_map);
 void visGridPath( vector<Vector3d> nodes, bool is_use_jps );
 
+
+std::vector<Eigen::VectorXd> optimize(std::vector<Eigen::Vector3d> path_main_point, Eigen::VectorXd time)
+{
+    visGridPath(path_main_point, false);
+    std::vector<Eigen::MatrixXd> data = traj_opt->data_config(path_main_point);    
+    std::vector<Eigen::VectorXd> P_coef_vec = traj_opt->traj_gen(data, time);
+    return P_coef_vec;
+}
+
 void rcvWaypointsCallback(const nav_msgs::Path & wp)
 {     
     if( wp.poses[0].pose.position.z < 0.0 || _has_map == false )
@@ -64,21 +73,22 @@ void rcvWaypointsCallback(const nav_msgs::Path & wp)
 
     Astar_path_finder->A_star_search(Eigen::Vector3d(0, 0, 2), target_pt);
     std::vector<Eigen::Vector3d> grid_path = Astar_path_finder->get_path();
-    visGridPath(grid_path, false);
     
     std::vector<Eigen::Vector3d> path_main_point = Astar_path_finder->path_simplify(grid_path);
-    std::vector<Eigen::MatrixXd> data = traj_opt->data_config(path_main_point);
     Eigen::VectorXd time = traj_opt->time_allocation(path_main_point);
-    std::vector<Eigen::VectorXd> P_coef_vec = traj_opt->traj_gen(data, time);
+    std::vector<Eigen::VectorXd> P_coef_vec = optimize(path_main_point, time);
+
+    int unsafe_segment = Astar_path_finder->safeCheck(*traj_opt, P_coef_vec, time);
+    while (unsafe_segment != -1) {
+
+        Eigen::Vector3d insert_point = (path_main_point[unsafe_segment] + path_main_point[unsafe_segment + 1]) / 2;
+        path_main_point.insert(path_main_point.begin() + unsafe_segment, insert_point);
+        Eigen::VectorXd time = traj_opt->time_allocation(path_main_point);
+        std::vector<Eigen::VectorXd> P_coef_vec = optimize(path_main_point, time);
+
+        unsafe_segment = Astar_path_finder->safeCheck(*traj_opt, P_coef_vec, time);
+    }
     traj_opt->Visualize(P_coef_vec, path_main_point, time);
-
-    // int unsafe_segment = Astar_path_finder->safeCheck(*traj_opt, P_coef_vec, time);
-    // while (unsafe_segment != -1) {
-
-    //     Eigen::Vector3d insert_point = path_main_point[unsafe_segment] + 
-
-    //     unsafe_segment = Astar_path_finder->safeCheck(*traj_opt, P_coef_vec, time);
-    // }
     
 }
 
