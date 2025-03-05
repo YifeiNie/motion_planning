@@ -8,6 +8,9 @@ void Traj_opt::init(ros::NodeHandle &nh)
     max_vel = nh.param("Opt/max_vel", 1.0);
     max_acc = nh.param("Opt/max_acc", 1.0);
     order = nh.param("Opt/order", 3);
+
+    poly_order = 2*order - 1;
+    p_num = poly_order + 1;
 }
 
 int Traj_opt::factorial(int x)
@@ -98,8 +101,6 @@ std::vector<Eigen::VectorXd> Traj_opt::traj_gen(const std::vector<Eigen::MatrixX
             return {};
         }
     }
-    int poly_order = 2*order - 1;
-    int p_num = poly_order + 1;
     int p_num_all = p_num * time_seg_num;
     int M_row = p_num;
     int M_col = p_num;
@@ -222,49 +223,74 @@ std::vector<Eigen::VectorXd> Traj_opt::traj_gen(const std::vector<Eigen::MatrixX
 
 }
 
+// 用于格式转化，从容器+向量+从高到低幂次排列 -->> 矩阵+每一列表示一个维度+从低到高幂次排列
+// 在使用getPos函数的时候，传参必须经过该格式转化
+Eigen::MatrixX3d Traj_opt::resize_coeff(std::vector<Eigen::VectorXd> P_coef_vec)
+{
+    int num_segments = P_coef_vec[0].size() / p_num;
+    Eigen::MatrixX3d coefficientMatrix = Eigen::MatrixXd::Zero(p_num * num_segments, 3);
+
+    for (int i = 0; i < num_segments; i++) {
+        Eigen::VectorXd segment = P_coef_vec[0].segment(i * p_num, p_num);
+        segment.reverseInPlace();
+        coefficientMatrix.col(0).segment(i * p_num, p_num) = segment;
+    }
+    for (int i = 0; i < num_segments; i++) {
+        Eigen::VectorXd segment = P_coef_vec[1].segment(i * p_num, p_num);
+        segment.reverseInPlace();
+        coefficientMatrix.col(1).segment(i * p_num, p_num) = segment;
+    }
+    for (int i = 0; i < num_segments; i++) {
+        Eigen::VectorXd segment = P_coef_vec[2].segment(i * p_num, p_num);
+        segment.reverseInPlace();
+        coefficientMatrix.col(2).segment(i * p_num, p_num) = segment;
+    }
+    return coefficientMatrix;
+
+}
+
 void Traj_opt::Visualize(std::vector<Eigen::VectorXd> P_coef_vec, 
                         std::vector<Eigen::Vector3d> &path, 
                         Eigen::VectorXd &time)
 {
-    int seg_P_num = 2 * order;
-    
-    int num_segments = P_coef_vec[0].size() / seg_P_num; 
-    Eigen::MatrixX3d coefficientMatrix = Eigen::MatrixXd::Zero(seg_P_num * num_segments, 3);
-    for (int i = 0; i < num_segments; i++) {
-        Eigen::VectorXd segment = P_coef_vec[0].segment(i * seg_P_num, seg_P_num);
-        segment.reverseInPlace();
-        coefficientMatrix.col(0).segment(i * seg_P_num, seg_P_num) = segment;
-    }
-    for (int i = 0; i < num_segments; i++) {
-        Eigen::VectorXd segment = P_coef_vec[1].segment(i * seg_P_num, seg_P_num);
-        segment.reverseInPlace();
-        coefficientMatrix.col(1).segment(i * seg_P_num, seg_P_num) = segment;
-    }
-    for (int i = 0; i < num_segments; i++) {
-        Eigen::VectorXd segment = P_coef_vec[2].segment(i * seg_P_num, seg_P_num);
-        segment.reverseInPlace();
-        coefficientMatrix.col(2).segment(i * seg_P_num, seg_P_num) = segment;
-    }
-    
+    int num_segments = P_coef_vec[0].size() / p_num;
+    Eigen::MatrixX3d coefficientMatrix = resize_coeff(P_coef_vec);
+
     traj.clear();
     traj.reserve(num_segments);
     for (int i = 0; i < num_segments; i++)
     {
-        traj.emplace_back(time(i),
-                            coefficientMatrix.block<6, 3>(6 * i, 0).transpose().rowwise().reverse());
+        traj.emplace_back(time(i), coefficientMatrix.block<6, 3>(6 * i, 0).transpose().rowwise().reverse());
     }
 
-
-    int rows = path.size();
-    int cols = path[0].size();
+    int cols = path.size();
+    int rows = path[0].size();
     Eigen::MatrixXd Path(rows, cols);
     for (int i = 0; i < rows; ++i) {
-        Path.row(i) = path[i].transpose(); // 转置成行向量并赋值
+        Path.col(i) = path[i].transpose(); // 转置成行向量并赋值
     }
+    std::cout << Path << std::endl;
     visualizer->visualize(traj, Path);
 }
 
 
+Eigen::Vector3d Traj_opt::getPos(Eigen::MatrixXd polyCoeff, int k, double t) {
+    
+    Eigen::Vector3d ret;
+    for (int dim = 0; dim < 3; dim++) {
+        Eigen::VectorXd coeff = (polyCoeff.col(dim)).segment(k * p_num, p_num);
+        Eigen::VectorXd time = Eigen::VectorXd::Zero(p_num);
 
-
+        for (int j = 0; j < p_num; j++) {
+            if (j == 0){
+                time(j) = 1.0;
+            }
+            else {
+                time(j) = pow(t, j);
+            }  
+            ret(dim) = coeff.dot(time);
+        }
+    }
+    return ret;
+}
 

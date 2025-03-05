@@ -61,22 +61,30 @@ void rcvWaypointsCallback(const nav_msgs::Path & wp)
                  wp.poses[0].pose.position.z;
 
     ROS_INFO("[A_star_node] receive the way-points");
+
     Astar_path_finder->A_star_search(Eigen::Vector3d(0, 0, 2), target_pt);
     std::vector<Eigen::Vector3d> grid_path = Astar_path_finder->get_path();
-    // visGridPath(grid_path, false);
-    std::cout << "00000000000000000000000" << std::endl;
+    visGridPath(grid_path, false);
+    
     std::vector<Eigen::Vector3d> path_main_point = Astar_path_finder->path_simplify(grid_path);
     std::vector<Eigen::MatrixXd> data = traj_opt->data_config(path_main_point);
     Eigen::VectorXd time = traj_opt->time_allocation(path_main_point);
-    std::vector<Eigen::VectorXd> poly_coeff = traj_opt->traj_gen(data, time);
-    // traj_opt->Visualize(poly_coeff, path_main_point, time);
-    std::cout << "111111111111111111111111111" << std::endl;
-    // visGridPath(path_main_point, true);
+    std::vector<Eigen::VectorXd> P_coef_vec = traj_opt->traj_gen(data, time);
+    traj_opt->Visualize(P_coef_vec, path_main_point, time);
+
+    // int unsafe_segment = Astar_path_finder->safeCheck(*traj_opt, P_coef_vec, time);
+    // while (unsafe_segment != -1) {
+
+    //     Eigen::Vector3d insert_point = path_main_point[unsafe_segment] + 
+
+    //     unsafe_segment = Astar_path_finder->safeCheck(*traj_opt, P_coef_vec, time);
+    // }
+    
 }
 
 // 接受random_complex_generator发出的原始点云并转化为栅格地图
 void rcvPointCloudCallBack(const sensor_msgs::PointCloud2 & pointcloud_map)
-{   
+{
     if(_has_map ) return;
 
     pcl::PointCloud<pcl::PointXYZ> cloud;

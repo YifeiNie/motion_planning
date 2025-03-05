@@ -1,5 +1,6 @@
 #pragma once
 #include <Eigen/Eigen>
+#include "trajectory_optimization.h"
 
 #define USE_A_STAR
 
@@ -15,7 +16,7 @@ struct GridNode
 	double g_score, f_score;
 
     Eigen::Vector3d coord; 
-    Eigen::Vector3i dir;   // direction of expanding
+    Eigen::Vector3i dir;   
     Eigen::Vector3i idx;
 	
     GridNode* father;
@@ -71,7 +72,7 @@ public:
     void setObs(const double coord_x, const double coord_y, const double coord_z);
     inline double calculate_d(const Eigen::Vector3d point_insert,const Eigen:: Vector3d point_st,const Eigen::Vector3d point_end);
     std::vector<Eigen::Vector3d> path_simplify(const std::vector<Eigen::Vector3d> &path);
-    int safeCheck(Eigen::MatrixXd polyCoeff, Eigen::VectorXd time);
+    int safeCheck(Traj_opt &traj_opt, std::vector<Eigen::VectorXd> P_coef_vec, Eigen::VectorXd time);
 };
 
 #endif

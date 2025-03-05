@@ -40,7 +40,7 @@ public:
         wayPointsMarker.id = 0;
         wayPointsMarker.type = visualization_msgs::Marker::SPHERE_LIST;
         wayPointsMarker.header.stamp = ros::Time::now();
-        wayPointsMarker.header.frame_id = "odom";
+        wayPointsMarker.header.frame_id = "world";
         wayPointsMarker.pose.orientation.w = 1.00;
         wayPointsMarker.action = visualization_msgs::Marker::ADD;
         wayPointsMarker.ns = "waypoints";
@@ -55,7 +55,7 @@ public:
         trajMarker = wayPointsMarker;
 
         trajMarker.type = visualization_msgs::Marker::LINE_LIST;
-        trajMarker.header.frame_id = "odom";
+        trajMarker.header.frame_id = "world";
         trajMarker.id = 0;
         trajMarker.ns = "trajectory";
         trajMarker.color.r = 0.00;

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0.2)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_BUILD_TYPE "Debug")	
 project(trajectory_optimization)
-
+set(CMAKE_CXX_FLAGS "-g -O0")
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp

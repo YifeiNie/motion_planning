@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 2.8.3)
 set(CMAKE_CXX_STANDARD 14)
 project(grid_path_searcher)
-
+set(CMAKE_BUILD_TYPE "Debug")	
+set(CMAKE_CXX_FLAGS "-g -O0")
 find_package(catkin REQUIRED COMPONENTS 
     roscpp 
     std_msgs
@@ -28,8 +29,6 @@ include_directories(
     ${PCL_INCLUDE_DIRS}
 )
 
-set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS} -O3 -Wall") # -Wextra -Werror
-
 add_executable( demo_node 
     src/demo_node.cpp
     src/A_star.cpp)
@@ -44,5 +43,4 @@ add_executable ( random_complex
 
 target_link_libraries( random_complex
     ${catkin_LIBRARIES}
-    ${PCL_LIBRARIES}
-    trajectory_optimization )  
+    ${PCL_LIBRARIES} )  
