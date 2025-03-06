@@ -15,7 +15,8 @@ endif()
 
 set(ADDITIONAL_CXX_FLAG "-Wall -O3 -march=native")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ADDITIONAL_CXX_FLAG}")
-
+set(CMAKE_BUILD_TYPE "Debug")	
+set(CMAKE_CXX_FLAGS "-g -O0")
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   tf

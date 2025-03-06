@@ -286,7 +286,7 @@ int AStarManager::safeCheck(Traj_opt &traj_opt, std::vector<Eigen::VectorXd> P_c
     int unsafe_segment = -1;        // -1表示多项式轨迹安全无碰撞
 
     Eigen::MatrixX3d polyCoeff = traj_opt.resize_coeff(P_coef_vec);
-    double delta_t = resolution / 1.0;
+    double delta_t = resolution / 1.5;
     double t = delta_t;
     Eigen::Vector3d advancePos;
     for(int i = 0; i < polyCoeff.rows() / traj_opt.p_num; i++)
