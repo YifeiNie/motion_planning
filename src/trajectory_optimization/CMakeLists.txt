@@ -6,7 +6,7 @@ set(CMAKE_CXX_FLAGS "-g -O0")
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
-  grid_path_searcher
+  quad_msgs
 )
 find_package(Eigen3 REQUIRED)
 find_package(yaml-cpp REQUIRED)
@@ -38,3 +38,5 @@ target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
   ${YAML_CPP_LIBRARIES}
 )
+
+add_dependencies(${PROJECT_NAME} quad_msgs_generate_messages_cpp)

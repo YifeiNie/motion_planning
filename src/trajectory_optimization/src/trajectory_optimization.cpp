@@ -5,8 +5,8 @@
 void Traj_opt::init(ros::NodeHandle &nh)
 {
     visualizer = std::make_unique<Visualizer>(nh);
-    max_vel = nh.param("Opt/max_vel", 1.0);
-    max_acc = nh.param("Opt/max_acc", 1.0);
+    max_vel = nh.param("Opt/max_vel", 0.5);
+    max_acc = nh.param("Opt/max_acc", 0.5);
     order = nh.param("Opt/order", 3);
 
     poly_order = 2*order - 1;
