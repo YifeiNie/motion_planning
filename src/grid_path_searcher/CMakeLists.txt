@@ -9,6 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
     nav_msgs
     visualization_msgs 
     trajectory_optimization
+    quad_msgs
 )
 
 find_package(Eigen3 REQUIRED)

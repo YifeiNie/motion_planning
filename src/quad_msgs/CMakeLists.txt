@@ -13,12 +13,14 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
+  geometry_msgs
 )
 
 
 ## Generate messages in the 'msg' folder
 add_message_files(
   FILES
+  Des_target.msg
   Target.msg
 )
 
@@ -40,12 +42,13 @@ add_message_files(
 generate_messages(
   DEPENDENCIES
   std_msgs
+  geometry_msgs
 )
 
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES quad_msgs
- CATKIN_DEPENDS message_generation message_runtime roscpp rospy std_msgs
+ CATKIN_DEPENDS message_generation message_runtime roscpp rospy std_msgs geometry_msgs
 #  DEPENDS system_lib
 )
 

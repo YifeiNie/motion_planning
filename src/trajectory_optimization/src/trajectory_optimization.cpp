@@ -1,4 +1,5 @@
 #include "trajectory_optimization.h"
+
 #include "cmath"
 
 
@@ -8,9 +9,13 @@ void Traj_opt::init(ros::NodeHandle &nh)
     max_vel = nh.param("Opt/max_vel", 0.5);
     max_acc = nh.param("Opt/max_acc", 0.5);
     order = nh.param("Opt/order", 3);
+    odom_name = nh.param("Opt/odom_name", std::string("/vins_fusion/odometry"));
 
     poly_order = 2*order - 1;
     p_num = poly_order + 1;
+    traj_start_time= ros::TIME_MAX;
+    odom_sub = nh.subscribe<nav_msgs::Odometry>(odom_name, 1, boost::bind(&Traj_opt::target_publish, this, _1));
+    target_pub = nh.advertise<quad_msgs::Des_target>("/des_target", 10);
 }
 
 int Traj_opt::factorial(int x)
@@ -83,22 +88,20 @@ std::vector<Eigen::MatrixXd> Traj_opt::data_config(std::vector<Eigen::Vector3d> 
  * @param time 每一段轨迹的预设时间
  * @return 多项式轨迹的系数矩阵容器
  */
-std::vector<Eigen::VectorXd> Traj_opt::traj_gen(const std::vector<Eigen::MatrixXd> &data, 
-                                                const Eigen::VectorXd &time)
+void Traj_opt::traj_gen(const std::vector<Eigen::MatrixXd> &data)
 {
-    std::vector<Eigen::MatrixXd> P_coef_mat;
-    std::vector<Eigen::VectorXd> P_coef_vec;
+    coeff_ready = false;
     int axis = data.size();
     int time_seg_num = time.size();
 
     for (int i = 0; i < axis; ++i) {
         if (data[i].rows() != order) {
             std::cout << "\033[31m[ERROR]: Data does not match order\033[0m" << std::endl;
-            return {};
+            return;
         }
         if (data[i].cols() != time_seg_num + 1) {
             std::cout << "\033[31m[ERROR]: Data does not match number of time segment\033[0m" << std::endl;
-            return {};
+            return;
         }
     }
     int p_num_all = p_num * time_seg_num;
@@ -219,8 +222,8 @@ std::vector<Eigen::VectorXd> Traj_opt::traj_gen(const std::vector<Eigen::MatrixX
         P_coef_mat.push_back(temp_mat);
         P_coef_vec.push_back(P);
     }
-    return P_coef_vec;
-
+    coef_mat_vis = resize_coeff(P_coef_vec);
+    coeff_ready = true;
 }
 
 // 用于格式转化，从容器+向量+从高到低幂次排列 -->> 矩阵+每一列表示一个维度+从低到高幂次排列
@@ -249,18 +252,15 @@ Eigen::MatrixX3d Traj_opt::resize_coeff(std::vector<Eigen::VectorXd> P_coef_vec)
 
 }
 
-void Traj_opt::Visualize(std::vector<Eigen::VectorXd> P_coef_vec, 
-                        std::vector<Eigen::Vector3d> &path, 
-                        Eigen::VectorXd &time)
+void Traj_opt::Visualize(std::vector<Eigen::Vector3d> &path)
 {
     int num_segments = P_coef_vec[0].size() / p_num;
-    Eigen::MatrixX3d coefficientMatrix = resize_coeff(P_coef_vec);
 
     traj.clear();
     traj.reserve(num_segments);
     for (int i = 0; i < num_segments; i++)
     {
-        traj.emplace_back(time(i), coefficientMatrix.block<6, 3>(6 * i, 0).transpose().rowwise().reverse());
+        traj.emplace_back(time(i), coef_mat_vis.block<6, 3>(6 * i, 0).transpose().rowwise().reverse());
     }
 
     int cols = path.size();
@@ -294,3 +294,9 @@ Eigen::Vector3d Traj_opt::getPos(Eigen::MatrixXd polyCoeff, int k, double t) {
     return ret;
 }
 
+void Traj_opt::target_publish(nav_msgs::OdometryConstPtr msg)
+{
+    double t = std::max(0.0, (msg->header.stamp - traj_start_time).toSec());
+
+
+}

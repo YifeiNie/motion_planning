@@ -51,12 +51,11 @@ void rcvPointCloudCallBack(const sensor_msgs::PointCloud2 & pointcloud_map);
 void visGridPath( vector<Vector3d> nodes, bool is_use_jps );
 
 
-std::vector<Eigen::VectorXd> optimize(std::vector<Eigen::Vector3d> path_main_point, Eigen::VectorXd time)
+void optimize(std::vector<Eigen::Vector3d> path_main_point)
 {
-    visGridPath(path_main_point, false);
+    traj_opt->time = traj_opt->time_allocation(path_main_point);
     std::vector<Eigen::MatrixXd> data = traj_opt->data_config(path_main_point);    
-    std::vector<Eigen::VectorXd> P_coef_vec = traj_opt->traj_gen(data, time);
-    return P_coef_vec;
+    traj_opt->traj_gen(data);
 }
 
 void rcvWaypointsCallback(const nav_msgs::Path & wp)
@@ -71,24 +70,23 @@ void rcvWaypointsCallback(const nav_msgs::Path & wp)
 
     ROS_INFO("[A_star_node] receive the way-points");
 
+    // A_star寻路
     Astar_path_finder->A_star_search(Eigen::Vector3d(0, 0, 2), target_pt);
     std::vector<Eigen::Vector3d> grid_path = Astar_path_finder->get_path();
-    
     std::vector<Eigen::Vector3d> path_main_point = Astar_path_finder->path_simplify(grid_path);
-    Eigen::VectorXd time = traj_opt->time_allocation(path_main_point);
-    std::vector<Eigen::VectorXd> P_coef_vec = optimize(path_main_point, time);
+    visGridPath(path_main_point, false);
 
-    int unsafe_segment = Astar_path_finder->safeCheck(*traj_opt, P_coef_vec, time);
+    // 轨迹优化和碰撞检测
+    optimize(path_main_point);
+    int unsafe_segment = Astar_path_finder->safeCheck(*traj_opt);
     while (unsafe_segment != -1) {
-
         Eigen::Vector3d insert_point = (path_main_point[unsafe_segment] + path_main_point[unsafe_segment + 1]) / 2;
         path_main_point.insert(path_main_point.begin() + unsafe_segment, insert_point);
-        Eigen::VectorXd time = traj_opt->time_allocation(path_main_point);
-        std::vector<Eigen::VectorXd> P_coef_vec = optimize(path_main_point, time);
-
-        unsafe_segment = Astar_path_finder->safeCheck(*traj_opt, P_coef_vec, time);
+        traj_opt->time = traj_opt->time_allocation(path_main_point);
+        optimize(path_main_point);
+        unsafe_segment = Astar_path_finder->safeCheck(*traj_opt);
     }
-    traj_opt->Visualize(P_coef_vec, path_main_point, time);
+    traj_opt->Visualize(path_main_point);
     
 }
 

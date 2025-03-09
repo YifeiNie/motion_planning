@@ -282,16 +282,16 @@ inline double AStarManager::calculate_d(const Eigen::Vector3d insert, const Eige
     return double(line2.cross(line1).norm()/line1.norm());
 }
 
-int AStarManager::safeCheck(Traj_opt &traj_opt, std::vector<Eigen::VectorXd> P_coef_vec, Eigen::VectorXd time) {
+int AStarManager::safeCheck(Traj_opt &traj_opt) {
     int unsafe_segment = -1;        // -1表示多项式轨迹安全无碰撞
-
+    std::vector<Eigen::VectorXd> P_coef_vec = traj_opt.P_coef_vec;
     Eigen::MatrixX3d polyCoeff = traj_opt.resize_coeff(P_coef_vec);
     double delta_t = resolution / 1.5;
     double t = delta_t;
     Eigen::Vector3d advancePos;
     for(int i = 0; i < polyCoeff.rows() / traj_opt.p_num; i++)
     {
-        while (t < time(i)) {
+        while (t < traj_opt.time(i)) {
             advancePos = traj_opt.getPos(polyCoeff, i, t);
             if (is_obstacle(coord2idx(advancePos))) {
                 unsafe_segment = i;
