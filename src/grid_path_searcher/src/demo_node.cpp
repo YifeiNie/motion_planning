@@ -51,13 +51,6 @@ void rcvPointCloudCallBack(const sensor_msgs::PointCloud2 & pointcloud_map);
 void visGridPath( vector<Vector3d> nodes, bool is_use_jps );
 
 
-void optimize(std::vector<Eigen::Vector3d> path_main_point)
-{
-    traj_opt->time = traj_opt->time_allocation(path_main_point);
-    std::vector<Eigen::MatrixXd> data = traj_opt->data_config(path_main_point);    
-    traj_opt->traj_gen(data);
-}
-
 void rcvWaypointsCallback(const nav_msgs::Path & wp)
 {     
     if( wp.poses[0].pose.position.z < 0.0 || _has_map == false )
@@ -71,19 +64,29 @@ void rcvWaypointsCallback(const nav_msgs::Path & wp)
     ROS_INFO("[A_star_node] receive the way-points");
 
     // A_star寻路
-    Astar_path_finder->A_star_search(Eigen::Vector3d(0, 0, 2), target_pt);
+    bool is_path_found = Astar_path_finder->A_star_search(traj_opt->odom_pos, target_pt);
+    if (!is_path_found) {
+        return;
+    }
     std::vector<Eigen::Vector3d> grid_path = Astar_path_finder->get_path();
     std::vector<Eigen::Vector3d> path_main_point = Astar_path_finder->path_simplify(grid_path);
     visGridPath(path_main_point, false);
 
     // 轨迹优化和碰撞检测
-    optimize(path_main_point);
+    traj_opt->optimize(path_main_point);
+    int safecheck_iter = 0;
     int unsafe_segment = Astar_path_finder->safeCheck(*traj_opt);
     while (unsafe_segment != -1) {
+
+        if (safecheck_iter >= Astar_path_finder->max_safecheck_iter) { // 说明插入了很多也无法避免碰撞，只能忽略此处碰撞防止无限循环
+            break;  
+        }
         Eigen::Vector3d insert_point = (path_main_point[unsafe_segment] + path_main_point[unsafe_segment + 1]) / 2;
-        path_main_point.insert(path_main_point.begin() + unsafe_segment, insert_point);
+        // 注意insert是在指定位置前插入，所以需要+1
+        path_main_point.insert(path_main_point.begin() + unsafe_segment + 1, insert_point);
+        ++ safecheck_iter;
         traj_opt->time = traj_opt->time_allocation(path_main_point);
-        optimize(path_main_point);
+        traj_opt->optimize(path_main_point);
         unsafe_segment = Astar_path_finder->safeCheck(*traj_opt);
     }
     traj_opt->Visualize(path_main_point);

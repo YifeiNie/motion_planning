@@ -59,13 +59,14 @@ private:
     inline double heuristics(Eigen::Vector3d start_coord, Eigen::Vector3d goal_coord);
 
 public:
+    int max_safecheck_iter;
 
     void init(ros::NodeHandle &nh, double resolution, Eigen::Vector3d max_coord, Eigen::Vector3d min_coord, int max_x_idx, int max_y_idx, int max_z_idx);
     inline Eigen::Vector3i coord2idx(Eigen::Vector3d coord);
     inline Eigen::Vector3d idx2coord(Eigen::Vector3i idx);
     void set_obstacle(Eigen::Vector3i idx);
     void A_star_expand_neighbors(GridNode* GridNodePtr);
-    void A_star_search(Eigen::Vector3d start_coord, Eigen::Vector3d goal_coord);
+    bool A_star_search(Eigen::Vector3d start_coord, Eigen::Vector3d goal_coord);
     std::vector<Eigen::Vector3d> get_path();
     Eigen::Vector3d coordRounding(const Eigen::Vector3d &coord);
 
@@ -73,6 +74,7 @@ public:
     inline double calculate_d(const Eigen::Vector3d point_insert,const Eigen:: Vector3d point_st,const Eigen::Vector3d point_end);
     std::vector<Eigen::Vector3d> path_simplify(const std::vector<Eigen::Vector3d> &path);
     int safeCheck(Traj_opt &traj_opt);
+    void reset_grid();
 };
 
 #endif

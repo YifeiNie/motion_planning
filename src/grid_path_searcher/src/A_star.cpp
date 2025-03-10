@@ -25,6 +25,7 @@ void AStarManager::init(ros::NodeHandle &nh, double resolution, Eigen::Vector3d 
 {
     nh.param("path/resolution", path_resolution, 0.1);
     nh.param("path/delta_t", delta_t, path_resolution / 2.0);
+    nh.param("path/delta_t", max_safecheck_iter, 4);
 
     this->resolution = resolution;
     inv_resolution = 1.0 / resolution; 
@@ -67,6 +68,22 @@ void AStarManager::init(ros::NodeHandle &nh, double resolution, Eigen::Vector3d 
         }
     }
 }
+
+void AStarManager::reset_grid()
+{
+    for (int i = 0; i < max_x_idx; i++) {
+        for (int j = 0; j < max_y_idx; j++) {
+            for (int k = 0; k < max_z_idx; k++) {
+                GridNode* node = GridNodeMap[i][j][k];
+                node->g_score = inf;             // 重置为无穷大
+                node->f_score = inf;             // 重置为无穷大
+                node->father = nullptr;          // 清空父节点
+                node->is_close = 0;              // 重置关闭状态
+            }
+        }
+    }
+}
+
 
 // 返回某个栅格是否为障碍物栅格
 inline bool AStarManager::is_obstacle(Eigen::Vector3i idx)
@@ -144,11 +161,23 @@ void AStarManager::A_star_expand_neighbors(GridNode* GridNodePtr)
 }
 
 // A*搜索
-void AStarManager::A_star_search(Eigen::Vector3d start_coord, Eigen::Vector3d goal_coord)
+bool AStarManager::A_star_search(Eigen::Vector3d start_coord, Eigen::Vector3d goal_coord)
 {
+    reset_grid();
     ros::Time start_time = ros::Time::now();
     Eigen::Vector3i start_idx = coord2idx(start_coord);
     Eigen::Vector3i end_idx = coord2idx(goal_coord);
+
+    if (goal_coord.x() < min_x_coord  || goal_coord.y() < min_y_coord  || goal_coord.z() < min_z_coord  ||
+        goal_coord.x() >= max_x_coord || goal_coord.y() >= max_y_coord || goal_coord.z() >= max_z_coord) {
+
+        std::cout << "[A_star]: Target point is out of range" << std::endl;
+        return false;
+    }
+    if (is_obstacle(end_idx)) {
+        std::cout << "[A_star]: Target point is obstacle" << std::endl;
+        return false;
+    }
 
     GridNode* start_ptr = GridNodeMap[start_idx[0]][start_idx[1]][start_idx[2]];
     GridNode* end_ptr = GridNodeMap[end_idx[0]][end_idx[1]][end_idx[2]];
@@ -177,7 +206,7 @@ void AStarManager::A_star_search(Eigen::Vector3d start_coord, Eigen::Vector3d go
             final_node_ptr = current_node_ptr;
             ros::Time end_time = ros::Time::now();
             ROS_WARN("[A*]{sucess}  Time in A*  is %f ms, path cost if %f m", (end_time - start_time).toSec() * 1000.0, current_node_ptr->g_score);
-            return;
+            return true;
         }
         A_star_expand_neighbors(current_node_ptr);
         for (int i = 0; i < neighbor_ptr_set.size(); i++)
@@ -203,6 +232,8 @@ void AStarManager::A_star_search(Eigen::Vector3d start_coord, Eigen::Vector3d go
             }
         }
     }
+    std::cout << "[A_star]: The current path is a dead end" << std::endl;
+    return false;
 }
 
 // 路径回溯
@@ -300,7 +331,7 @@ int AStarManager::safeCheck(Traj_opt &traj_opt) {
             t += delta_t;
         }
         if (unsafe_segment != -1) {
-            std::cout << "segment " << i << "unsafe" << std::endl;
+            std::cout << "segment " << i << " unsafe" << std::endl;
             break;
         } else {
             t = delta_t;

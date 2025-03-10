@@ -9,13 +9,24 @@ void Traj_opt::init(ros::NodeHandle &nh)
     max_vel = nh.param("Opt/max_vel", 0.5);
     max_acc = nh.param("Opt/max_acc", 0.5);
     order = nh.param("Opt/order", 3);
-    odom_name = nh.param("Opt/odom_name", std::string("/vins_fusion/odometry"));
+    axis = nh.param("Opt/axis", 3);
 
     poly_order = 2*order - 1;
     p_num = poly_order + 1;
     traj_start_time= ros::TIME_MAX;
-    odom_sub = nh.subscribe<nav_msgs::Odometry>(odom_name, 1, boost::bind(&Traj_opt::target_publish, this, _1));
-    target_pub = nh.advertise<quad_msgs::Des_target>("/des_target", 10);
+
+    odom_pos = Eigen::VectorXd::Zero(order);
+    odom_pos(2) = 2;
+    odom_vel = Eigen::VectorXd::Zero(order);
+    odom_acc = Eigen::VectorXd::Zero(order);
+
+    FSM_task_timer = nh.createTimer(ros::Duration(0.01), boost::bind(&Traj_opt::FSM_task, this, _1));
+    odom_sub = nh.subscribe<nav_msgs::Odometry>("/vins_fusion/odometry", 1, boost::bind(&Traj_opt::odom_rcv_callback, this, _1));  
+}
+
+void Traj_opt::reset() {
+    P_coef_vec.clear();
+    P_coef_mat.clear();
 }
 
 int Traj_opt::factorial(int x)
@@ -59,7 +70,6 @@ Eigen::VectorXd Traj_opt::time_allocation(std::vector<Eigen::Vector3d> &path)  /
 
 std::vector<Eigen::MatrixXd> Traj_opt::data_config(std::vector<Eigen::Vector3d> &path)
 {
-    int axis = path[0].rows();
     int seg_num = path.size() - 1;
     std::vector<Eigen::MatrixXd> data;
 
@@ -71,37 +81,29 @@ std::vector<Eigen::MatrixXd> Traj_opt::data_config(std::vector<Eigen::Vector3d> 
 
     for (int i = 0; i < axis; ++i) {
         Eigen::MatrixXd temp = Eigen::MatrixXd::Zero(order, seg_num + 1);
-        temp.row(0) = mat.row(i);
+        temp.row(0) = mat.row(i);       // pos
+        temp(1, 1) = odom_vel(i);      // vel
+        temp(2, 1) = odom_acc(i);      // acc
         data.emplace_back(temp);
     }
 
     return data;
 }
 
-/**
- * @brief 求解多项式轨迹的系数
- * @param data 数据矩阵容器，容器中元素个数表示轴的数量，每个轴的数据矩阵格式如下，一个"'"表示一阶导数
- *              p0    p1    p2    ....    pn
- *              p0'   p1'   p2'   ....    pn'
- *              p0''  p1''  p2''  ....    pn''
- *              .     .     .     ....    .
- * @param time 每一段轨迹的预设时间
- * @return 多项式轨迹的系数矩阵容器
- */
-void Traj_opt::traj_gen(const std::vector<Eigen::MatrixXd> &data)
+
+bool Traj_opt::traj_gen(const std::vector<Eigen::MatrixXd> &data)
 {
     coeff_ready = false;
-    int axis = data.size();
     int time_seg_num = time.size();
 
     for (int i = 0; i < axis; ++i) {
         if (data[i].rows() != order) {
             std::cout << "\033[31m[ERROR]: Data does not match order\033[0m" << std::endl;
-            return;
+            return false;
         }
         if (data[i].cols() != time_seg_num + 1) {
             std::cout << "\033[31m[ERROR]: Data does not match number of time segment\033[0m" << std::endl;
-            return;
+            return false;
         }
     }
     int p_num_all = p_num * time_seg_num;
@@ -224,6 +226,7 @@ void Traj_opt::traj_gen(const std::vector<Eigen::MatrixXd> &data)
     }
     coef_mat_vis = resize_coeff(P_coef_vec);
     coeff_ready = true;
+    return true;
 }
 
 // 用于格式转化，从容器+向量+从高到低幂次排列 -->> 矩阵+每一列表示一个维度+从低到高幂次排列
@@ -266,10 +269,11 @@ void Traj_opt::Visualize(std::vector<Eigen::Vector3d> &path)
     int cols = path.size();
     int rows = path[0].size();
     Eigen::MatrixXd Path(rows, cols);
-    for (int i = 0; i < rows; ++i) {
-        Path.col(i) = path[i].transpose(); // 转置成行向量并赋值
+    for (int i = 0; i < cols; ++i) {
+        Path.col(i) = path[i].transpose();
     }
     std::cout << Path << std::endl;
+    std::cout << coef_mat_vis << std::endl;
     visualizer->visualize(traj, Path);
 }
 
@@ -294,9 +298,82 @@ Eigen::Vector3d Traj_opt::getPos(Eigen::MatrixXd polyCoeff, int k, double t) {
     return ret;
 }
 
-void Traj_opt::target_publish(nav_msgs::OdometryConstPtr msg)
+void Traj_opt::change_state(STATE new_state) {
+    int old_state = int(state);
+    state = new_state;
+    std::cout << "[state]: from " + state_str[old_state] + " to " + state_str[int(new_state)] << std::endl;
+}
+
+void Traj_opt::print_state() {
+  std::cout << "[State]: " + state_str[int(state)] << std::endl;
+}
+
+void Traj_opt::odom_rcv_callback(nav_msgs::OdometryConstPtr msg)
 {
-    double t = std::max(0.0, (msg->header.stamp - traj_start_time).toSec());
+    odom_pos(0) = msg->pose.pose.position.x;
+    odom_pos(1) = msg->pose.pose.position.y;
+    odom_pos(2) = msg->pose.pose.position.z;
+
+    odom_vel(0) = msg->twist.twist.linear.x;
+    odom_vel(1) = msg->twist.twist.linear.y;
+    odom_vel(2) = msg->twist.twist.linear.z;
+
+}
+
+void Traj_opt::optimize(std::vector<Eigen::Vector3d> path_main_point)
+{
+    reset();
+    time = time_allocation(path_main_point);
+    std::vector<Eigen::MatrixXd> data = data_config(path_main_point);    
+    traj_gen(data);
+}
 
 
+void Traj_opt::FSM_task(const ros::TimerEvent &event)
+{
+    // static int cnt = 0;
+    // cnt++;
+    // if (cnt == 100) {
+    //     print_state();
+    //     cnt = 0; 
+    // }
+    // if (!has_odom) {
+    //     std::cout << "wait for odom." << std::endl;
+    // }
+        
+    // if (!has_target) {
+    //     std::cout << "wait for goal." << std::endl;
+    //     cnt = 0;
+    // }
+
+    // switch (state)
+    // {
+    //     case INIT:
+    //         if (!has_odom || !has_target) {
+    //             return;
+    //         }
+    //         change_state(WAIT_TARGET);
+    //         break;
+
+            
+    //     case WAIT_TARGET:
+    //         if (!has_target) {
+    //             return;
+    //         }
+    //         change_state(GEN_NEW_TRAJ);
+    //         break;
+
+    //     case GEN_NEW_TRAJ:
+
+
+    //         break;
+    //     case EXEC_TRAJ:
+
+    //         break;
+    //     case REPLAN_TRAJ:
+
+    //         break;            
+    //     default:
+    //         break;
+    // }
 }
