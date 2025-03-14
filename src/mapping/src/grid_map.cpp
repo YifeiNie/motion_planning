@@ -98,10 +98,9 @@ void GridMap::initMap(ros::NodeHandle &nh)
       0.0, 0.0, 0.0, 1.0;
 
   /* init callback */
-
+  // 订阅深度图像数据和相机外参用于建图
   depth_sub_.reset(new message_filters::Subscriber<sensor_msgs::Image>(node_, "grid_map/depth", 50));
-  extrinsic_sub_ = node_.subscribe<nav_msgs::Odometry>(
-      "/vins_fusion/extrinsic", 10, &GridMap::extrinsicCallback, this); //sub
+  extrinsic_sub_ = node_.subscribe<nav_msgs::Odometry>("/vins_fusion/extrinsic", 10, &GridMap::extrinsicCallback, this); //sub
 
   if (mp_.pose_type_ == POSE_STAMPED)
   {

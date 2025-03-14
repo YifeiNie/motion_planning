@@ -227,7 +227,7 @@ void visGridPath( vector<Vector3d> nodes, bool is_use_jps )
     node_vis.pose.orientation.z = 0.0;
     node_vis.pose.orientation.w = 1.0;
 
-    if(is_use_jps){
+    if (is_use_jps){
         node_vis.color.a = 1.0;
         node_vis.color.r = 1.0;
         node_vis.color.g = 0.0;

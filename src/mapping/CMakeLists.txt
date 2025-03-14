@@ -22,7 +22,7 @@ find_package(PCL 1.7 REQUIRED)
 
 catkin_package(
  INCLUDE_DIRS include
- LIBRARIES mapping
+ LIBRARIES  ${PROJECT_NAME}
  CATKIN_DEPENDS roscpp std_msgs
  DEPENDS OpenCV
 
@@ -45,7 +45,7 @@ add_library(${PROJECT_NAME}
                ${SRC_FILES}
 )
 
-target_link_libraries( mapping
+target_link_libraries( ${PROJECT_NAME}
     ${catkin_LIBRARIES} 
     ${PCL_LIBRARIES}
     ${OpenCV_LIBS}
