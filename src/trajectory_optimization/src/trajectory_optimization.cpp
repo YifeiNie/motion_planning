@@ -20,7 +20,6 @@ void Traj_opt::init(ros::NodeHandle &nh)
     odom_vel = Eigen::VectorXd::Zero(order);
     odom_acc = Eigen::VectorXd::Zero(order);
 
-    FSM_task_timer = nh.createTimer(ros::Duration(0.01), FSM_task);
     odom_sub = nh.subscribe<nav_msgs::Odometry>("/vins_fusion/odometry", 1, boost::bind(&Traj_opt::odom_rcv_callback, this, _1));  
 }
 

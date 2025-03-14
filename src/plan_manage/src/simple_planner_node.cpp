@@ -52,8 +52,15 @@ void visGridPath( vector<Vector3d> nodes, bool is_use_jps );
 
 void rcvWaypointsCallback(const nav_msgs::Path & wp)
 {     
-    if( wp.poses[0].pose.position.z < 0.0 || _has_map == false )
+    if( wp.poses[0].pose.position.z < 0.0 ) {
+        ROS_WARN("Coordinate Z smaller than zero!!");
         return;
+    }
+    if (_has_map == false) {
+        ROS_WARN("No map!!");
+        return;
+    }
+
 
     Vector3d target_pt;
     target_pt << wp.poses[0].pose.position.x,
@@ -103,7 +110,11 @@ void rcvPointCloudCallBack(const sensor_msgs::PointCloud2 & pointcloud_map)
 
     pcl::fromROSMsg(pointcloud_map, cloud);
     
-    if( (int)cloud.points.size() == 0 ) return;
+    if ((int)cloud.points.size() == 0 ) 
+    {
+        std::cout << "Point cloud is enpty!" << std::endl;
+        return;
+    }
     // 遍历点云，并对每个点进行扩展操作，即对一个点的xyz都加减若干距离，然后根据分辨率确定扩展的点的个数
     pcl::PointXYZ pt, pt_inf;
     int inf_step   = round(_cloud_margin * _inv_resolution);
@@ -148,7 +159,7 @@ void rcvPointCloudCallBack(const sensor_msgs::PointCloud2 & pointcloud_map)
 
 int main(int argc, char** argv)
 {
-    ros::init(argc, argv, "demo_node");
+    ros::init(argc, argv, "plan_manage");
     ros::NodeHandle nh("~");
     _map_sub  = nh.subscribe( "map",       1, rcvPointCloudCallBack );
     _pts_sub  = nh.subscribe( "waypoints", 1, rcvWaypointsCallback );
@@ -203,9 +214,9 @@ void visGridPath( vector<Vector3d> nodes, bool is_use_jps )
     node_vis.header.stamp = ros::Time::now();
     
     if(is_use_jps)
-        node_vis.ns = "demo_node/jps_path";
+        node_vis.ns = "plan_manage/jps_path";
     else
-        node_vis.ns = "demo_node/astar_path";
+        node_vis.ns = "plan_manage/astar_path";
 
     node_vis.type = visualization_msgs::Marker::CUBE_LIST;
     node_vis.action = visualization_msgs::Marker::ADD;

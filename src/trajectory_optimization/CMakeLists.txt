@@ -4,10 +4,9 @@ set(CMAKE_BUILD_TYPE "Debug")
 project(trajectory_optimization)
 set(CMAKE_CXX_FLAGS "-g -O0")
 
-find_package(catkin REQUIRED COMPONENTS
+find_package(catkin REQUIRED COMPONENTS  # 解析xml文件
   roscpp
   quad_msgs
-  grid_path_searcher
 )
 find_package(Eigen3 REQUIRED)
 find_package(yaml-cpp REQUIRED)

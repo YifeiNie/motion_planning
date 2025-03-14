@@ -11,8 +11,6 @@
 #include "quad_msgs/Target.h"
 #include "quad_msgs/Des_target.h"
 
-void FSM_task(const ros::TimerEvent &event);
-
 enum STATE {
     INIT,
     WAIT_TARGET,
@@ -52,7 +50,6 @@ public:
     ros::Time traj_start_time;
 
     ros::Subscriber odom_sub;
-    ros::Timer FSM_task_timer;
 
     void init(ros::NodeHandle &nh);
     int factorial(int x);

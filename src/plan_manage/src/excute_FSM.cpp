@@ -2,10 +2,11 @@
 
 #include "trajectory_optimization.h"
 #include "A_star.h"
-
+#include "plan_manage.h"
 extern AStarManager * Astar_path_finder;
 extern Traj_opt * traj_opt;
-void FSM_task(const ros::TimerEvent &event)
+
+void Plan_manage::FSM_task(const ros::TimerEvent &event)
 {
     // static int cnt = 0;
     // cnt++;
@@ -52,4 +53,9 @@ void FSM_task(const ros::TimerEvent &event)
     //     default:
     //         break;
     // }
+}
+
+void Plan_manage::init(ros::NodeHandle &nh)
+{
+    FSM_task_timer = nh.createTimer(ros::Duration(0.01), boost::bind(&Plan_manage::FSM_task, this, _1));
 }

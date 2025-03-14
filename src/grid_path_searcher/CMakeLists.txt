@@ -30,11 +30,10 @@ include_directories(
     ${PCL_INCLUDE_DIRS}
 )
 
-add_executable( demo_node 
-    src/demo_node.cpp
+add_library( ${PROJECT_NAME} 
     src/A_star.cpp)
 
-target_link_libraries(demo_node 
+target_link_libraries(${PROJECT_NAME}  
     ${catkin_LIBRARIES}
     ${PCL_LIBRARIES} 
 )
