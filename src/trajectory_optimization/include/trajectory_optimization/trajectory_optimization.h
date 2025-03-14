@@ -11,6 +11,8 @@
 #include "quad_msgs/Target.h"
 #include "quad_msgs/Des_target.h"
 
+void FSM_task(const ros::TimerEvent &event);
+
 enum STATE {
     INIT,
     WAIT_TARGET,
@@ -61,8 +63,7 @@ public:
     Eigen::Vector3d getPos(Eigen::MatrixXd polyCoeff, int k, double t);
     void Visualize(std::vector<Eigen::Vector3d> &path);
     void change_state(STATE new_state);
-    void print_state();
-    void FSM_task(const ros::TimerEvent &event);                                        // 定期执行
+    void print_state();                                     // 定期执行
     void odom_rcv_callback(nav_msgs::OdometryConstPtr msg);        // 用于获取轨迹规划的初始的pos，vel，和acc
     void optimize(std::vector<Eigen::Vector3d> path_main_point);
     void reset();

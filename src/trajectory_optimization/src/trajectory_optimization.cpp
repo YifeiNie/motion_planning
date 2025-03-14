@@ -11,7 +11,7 @@ void Traj_opt::init(ros::NodeHandle &nh)
     order = nh.param("Opt/order", 3);
     axis = nh.param("Opt/axis", 3);
 
-    poly_order = 2*order - 1;
+    poly_order = 2 * order - 1;
     p_num = poly_order + 1;
     traj_start_time= ros::TIME_MAX;
 
@@ -20,7 +20,7 @@ void Traj_opt::init(ros::NodeHandle &nh)
     odom_vel = Eigen::VectorXd::Zero(order);
     odom_acc = Eigen::VectorXd::Zero(order);
 
-    FSM_task_timer = nh.createTimer(ros::Duration(0.01), boost::bind(&Traj_opt::FSM_task, this, _1));
+    FSM_task_timer = nh.createTimer(ros::Duration(0.01), FSM_task);
     odom_sub = nh.subscribe<nav_msgs::Odometry>("/vins_fusion/odometry", 1, boost::bind(&Traj_opt::odom_rcv_callback, this, _1));  
 }
 
@@ -318,6 +318,7 @@ void Traj_opt::odom_rcv_callback(nav_msgs::OdometryConstPtr msg)
     odom_vel(1) = msg->twist.twist.linear.y;
     odom_vel(2) = msg->twist.twist.linear.z;
 
+    has_odom = true;    
 }
 
 void Traj_opt::optimize(std::vector<Eigen::Vector3d> path_main_point)
@@ -328,52 +329,3 @@ void Traj_opt::optimize(std::vector<Eigen::Vector3d> path_main_point)
     traj_gen(data);
 }
 
-
-void Traj_opt::FSM_task(const ros::TimerEvent &event)
-{
-    // static int cnt = 0;
-    // cnt++;
-    // if (cnt == 100) {
-    //     print_state();
-    //     cnt = 0; 
-    // }
-    // if (!has_odom) {
-    //     std::cout << "wait for odom." << std::endl;
-    // }
-        
-    // if (!has_target) {
-    //     std::cout << "wait for goal." << std::endl;
-    //     cnt = 0;
-    // }
-
-    // switch (state)
-    // {
-    //     case INIT:
-    //         if (!has_odom || !has_target) {
-    //             return;
-    //         }
-    //         change_state(WAIT_TARGET);
-    //         break;
-
-            
-    //     case WAIT_TARGET:
-    //         if (!has_target) {
-    //             return;
-    //         }
-    //         change_state(GEN_NEW_TRAJ);
-    //         break;
-
-    //     case GEN_NEW_TRAJ:
-
-
-    //         break;
-    //     case EXEC_TRAJ:
-
-    //         break;
-    //     case REPLAN_TRAJ:
-
-    //         break;            
-    //     default:
-    //         break;
-    // }
-}

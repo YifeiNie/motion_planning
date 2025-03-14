@@ -7,6 +7,7 @@ set(CMAKE_CXX_FLAGS "-g -O0")
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   quad_msgs
+  grid_path_searcher
 )
 find_package(Eigen3 REQUIRED)
 find_package(yaml-cpp REQUIRED)
@@ -27,6 +28,7 @@ include_directories(
 )
 
 file(GLOB SRC_FILES "src/*cpp")
+
 
 # 生成一个叫做${PROJECT_NAME}的库，包含了${SRC_FILES}这些文件
 add_library(${PROJECT_NAME}

@@ -10,4 +10,5 @@
 
 - 在使用catkin_make的时候，会按照默认的顺序对功能包进行编译，这导致了有的被依赖的包尚未被编译，未生成xxxConfig.cmake文件，因此也无法被其他包的findpackage()命令找到
 - 需要在package.xml文件里声明依赖就可以避免这种问题
-- 由于头文件互相引用的问题，工程新内容后可能出现找不到头文件的问题，记得不要仅仅修改新增内容的cmakelist，依赖它的package的cmakelist也要修改
+- 由于头文件互相引用的问题，更新内容后可能出现找不到头文件的问题，记得不要仅仅修改新增内容的cmakelist，依赖它的package的cmakelist也要修改
+- CMakeLists.txt如果使用`file(GLOB SRC_FILES "src/*cpp")`，再添加新文件后并不会自动更新cpp文件列表，需要修改CMakeLists.txt，比如加一个回车，这样完全重新编译，才会重新寻找cpp文件

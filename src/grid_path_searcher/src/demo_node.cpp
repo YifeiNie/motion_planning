@@ -14,7 +14,6 @@
 #include <visualization_msgs/MarkerArray.h>
 #include <visualization_msgs/Marker.h>
 
-//#include "graph_searcher.h"
 #include "backward.hpp"
 #include "A_star.h"
 #include "trajectory_optimization.h"
