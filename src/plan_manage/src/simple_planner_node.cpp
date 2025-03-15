@@ -17,6 +17,7 @@
 #include "backward.hpp"
 #include "A_star.h"
 #include "trajectory_optimization.h"
+#include "grid_map.h"
 
 using namespace std;
 using namespace Eigen;
@@ -43,7 +44,7 @@ ros::Publisher  _grid_path_vis_pub, _debug_nodes_vis_pub, _closed_nodes_vis_pub,
 //gridPathFinder * Astar_path_finder = new gridPathFinder();
 AStarManager * Astar_path_finder  = new AStarManager();
 Traj_opt * traj_opt = new Traj_opt();
-
+GridMap::Ptr grid_map;
 
 void rcvWaypointsCallback(const nav_msgs::Path & wp);
 void rcvPointCloudCallBack(const sensor_msgs::PointCloud2 & pointcloud_map);
@@ -78,24 +79,24 @@ void rcvWaypointsCallback(const nav_msgs::Path & wp)
     std::vector<Eigen::Vector3d> path_main_point = Astar_path_finder->path_simplify(grid_path);
     visGridPath(path_main_point, false);
 
-    // 轨迹优化和碰撞检测
-    traj_opt->optimize(path_main_point);
-    int safecheck_iter = 0;
-    int unsafe_segment = Astar_path_finder->safeCheck(*traj_opt);
-    while (unsafe_segment != -1) {
+    // // 轨迹优化和碰撞检测
+    // traj_opt->optimize(path_main_point);
+    // int safecheck_iter = 0;
+    // int unsafe_segment = Astar_path_finder->safeCheck(*traj_opt);
+    // while (unsafe_segment != -1) {
 
-        if (safecheck_iter >= Astar_path_finder->max_safecheck_iter) { // 说明插入了很多也无法避免碰撞，只能忽略此处碰撞防止无限循环
-            break;  
-        }
-        Eigen::Vector3d insert_point = (path_main_point[unsafe_segment] + path_main_point[unsafe_segment + 1]) / 2;
-        // 注意insert是在指定位置前插入，所以需要+1
-        path_main_point.insert(path_main_point.begin() + unsafe_segment + 1, insert_point);
-        ++ safecheck_iter;
-        traj_opt->time = traj_opt->time_allocation(path_main_point);
-        traj_opt->optimize(path_main_point);
-        unsafe_segment = Astar_path_finder->safeCheck(*traj_opt);
-    }
-    traj_opt->Visualize(path_main_point);
+    //     if (safecheck_iter >= Astar_path_finder->max_safecheck_iter) { // 说明插入了很多也无法避免碰撞，只能忽略此处碰撞防止无限循环
+    //         break;  
+    //     }
+    //     Eigen::Vector3d insert_point = (path_main_point[unsafe_segment] + path_main_point[unsafe_segment + 1]) / 2;
+    //     // 注意insert是在指定位置前插入，所以需要+1
+    //     path_main_point.insert(path_main_point.begin() + unsafe_segment + 1, insert_point);
+    //     ++ safecheck_iter;
+    //     traj_opt->time = traj_opt->time_allocation(path_main_point);
+    //     traj_opt->optimize(path_main_point);
+    //     unsafe_segment = Astar_path_finder->safeCheck(*traj_opt);
+    // }
+    // traj_opt->Visualize(path_main_point);
     
 }
 
@@ -156,7 +157,9 @@ void rcvPointCloudCallBack(const sensor_msgs::PointCloud2 & pointcloud_map)
 
     _has_map = true;
 }
-
+// void cbk(const ros::TimerEvent& e){
+//     ROS_INFO("use %.4f secs", (ros::Time::now()).toSec());
+// }
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "plan_manage");
@@ -191,18 +194,18 @@ int main(int argc, char** argv)
     _max_y_id = (int)(_y_size * _inv_resolution);
     _max_z_id = (int)(_z_size * _inv_resolution);
 
-    Astar_path_finder -> init(nh, _resolution, _map_lower, _map_upper, _max_x_id, _max_y_id, _max_z_id);
-    traj_opt->init(nh);
-
-    ros::Rate rate(100);
-    bool status = ros::ok();
-    while(status) 
-    {
-        ros::spinOnce();      
-        status = ros::ok();
-        rate.sleep();
-    }
-
+    // Astar_path_finder -> init(nh, _resolution, _map_lower, _map_upper, _max_x_id, _max_y_id, _max_z_id);
+    // traj_opt->init(nh);
+    // ros::Timer time_test = nh.createTimer(ros::Duration(0.1), cbk);
+    grid_map.reset(new GridMap);
+    grid_map->initMap(nh);
+    ros::spin();
+    // ros::Rate rate(100);
+    // while(ros::ok()) 
+    // {
+    //     ros::spinOnce();      
+    //     rate.sleep();
+    // }
     delete Astar_path_finder;
     return 0;
 }
