@@ -90,9 +90,9 @@
         <param name="sensing/rate" value="0.5"/>
     </node> -->
 
-    <!-- <node pkg="waypoint_generator" name="waypoint_generator" type="waypoint_generator" output="screen">
+    <node pkg="waypoint_generator" name="waypoint_generator" type="waypoint_generator" output="screen">
         <remap from="~goal" to="/goal"/>
         <param name="waypoint_type" value="manual-lonely-waypoint"/>
-    </node> -->
+    </node>
 
 </launch>
