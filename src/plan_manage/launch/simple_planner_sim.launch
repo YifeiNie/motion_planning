@@ -1,0 +1,98 @@
+<launch>
+
+    <arg name="map_size_x" default="30.0"/>
+    <arg name="map_size_y" default="20.0"/>
+    <arg name="map_size_z" default=" 5.0"/>
+
+    <arg name="start_x" default=" 0.0"/>
+    <arg name="start_y" default=" 0.0"/>
+    <arg name="start_z" default=" 1.0"/>
+    <arg name="cx" value="321.04638671875"/>
+    <arg name="cy" value="243.44969177246094"/>
+    <arg name="fx" value="387.229248046875"/>
+    <arg name="fy" value="387.229248046875"/>
+    <node pkg="rviz" type="rviz" name="rivz" args="-d $(find plan_manage)/launch/rviz_config/demo.rviz" />
+
+    <node pkg="plan_manage" type="plan_manage" name="plan_manage" output="screen" required = "true">
+        <remap from="~waypoints" to="/waypoint_generator/waypoints"/>
+        <remap from="~map" to="/random_complex/global_map"/>
+
+        <param name="map/margin" value="0.0" />
+        <param name="map/resolution" value="0.2" />
+        <param name="map/x_size" value="$(arg map_size_x)"/>
+        <param name="map/y_size" value="$(arg map_size_y)"/>
+        <param name="map/z_size" value="$(arg map_size_z)"/>
+
+        <param name="planning/start_x" value="$(arg start_x)"/>
+        <param name="planning/start_y" value="$(arg start_y)"/>
+        <param name="planning/start_z" value="$(arg start_z)"/>
+        <param name="path/resolution"  value="0.15"/>
+
+        <param name="grid_map/resolution"      value="0.15" /> 
+        <param name="grid_map/map_size_x"   value="$(arg map_size_x)" /> 
+        <param name="grid_map/map_size_y"   value="$(arg map_size_y)" /> 
+        <param name="grid_map/map_size_z"   value="$(arg map_size_z)" /> 
+        <param name="grid_map/local_update_range_x"  value="5.5" /> 
+        <param name="grid_map/local_update_range_y"  value="5.5" /> 
+        <param name="grid_map/local_update_range_z"  value="4.5" /> 
+        <param name="grid_map/obstacles_inflation"     value="0.299" /> 
+        <param name="grid_map/local_map_margin" value="10"/>
+        <param name="grid_map/ground_height"        value="-0.01"/>
+        <!-- camera parameter -->
+        <param name="grid_map/cx" value="$(arg cx)"/>
+        <param name="grid_map/cy" value="$(arg cy)"/>
+        <param name="grid_map/fx" value="$(arg fx)"/>
+        <param name="grid_map/fy" value="$(arg fy)"/>
+        <!-- depth filter -->
+        <param name="grid_map/use_depth_filter" value="true"/>
+        <param name="grid_map/depth_filter_tolerance" value="0.15"/>
+        <param name="grid_map/depth_filter_maxdist"   value="5.0"/>
+        <param name="grid_map/depth_filter_mindist"   value="0.2"/>
+        <param name="grid_map/depth_filter_margin"    value="2"/>
+        <param name="grid_map/k_depth_scaling_factor" value="1000.0"/>
+        <param name="grid_map/skip_pixel" value="2"/>
+        <!-- local fusion -->
+        <param name="grid_map/p_hit"  value="0.65"/>
+        <param name="grid_map/p_miss" value="0.35"/>
+        <param name="grid_map/p_min"  value="0.12"/>
+        <param name="grid_map/p_max"  value="0.90"/>
+        <param name="grid_map/p_occ"  value="0.80"/>
+        <param name="grid_map/min_ray_length" value="0.3"/>
+        <param name="grid_map/max_ray_length" value="5.0"/>
+
+        <param name="grid_map/visualization_truncate_height"   value="1.8"/>
+        <param name="grid_map/show_occ_time"  value="false"/>
+        <param name="grid_map/pose_type"     value="2"/>  
+        <param name="grid_map/frame_id"      value="world"/>
+    </node>
+
+    <!-- <node pkg ="grid_path_searcher" name ="random_complex" type ="random_complex" output = "screen">
+
+        <param name="init_state_x" value="$(arg start_x)"/>
+        <param name="init_state_y" value="$(arg start_y)"/>
+
+        <param name="map/x_size" value="$(arg map_size_x)" />
+        <param name="map/y_size" value="$(arg map_size_y)" />
+        <param name="map/z_size" value="$(arg map_size_z)" />
+
+        <param name="map/circle_num" value="30"/>
+        <param name="map/obs_num" value="200"/>
+        <param name="map/resolution" value="0.1"/>
+
+        <param name="ObstacleShape/lower_rad" value="0.1"/>
+        <param name="ObstacleShape/upper_rad" value="0.7"/>
+        <param name="ObstacleShape/lower_hei" value="1.0"/>
+        <param name="ObstacleShape/upper_hei" value="3.0"/>
+
+        <param name="CircleShape/lower_circle_rad" value="0.6"/>
+        <param name="CircleShape/upper_circle_rad" value="2.0"/>
+
+        <param name="sensing/rate" value="0.5"/>
+    </node> -->
+
+    <node pkg="waypoint_generator" name="waypoint_generator" type="waypoint_generator" output="screen">
+        <remap from="~goal" to="/goal"/>
+        <param name="waypoint_type" value="manual-lonely-waypoint"/>
+    </node>
+
+</launch>

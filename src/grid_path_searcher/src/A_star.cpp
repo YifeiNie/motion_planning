@@ -2,7 +2,7 @@
 #include <ros/console.h>
 #include <cmath>
 
-#include "backward.hpp"
+// #include "backward.hpp"
 #include "A_star.h"
 
 #ifdef USE_A_STAR
@@ -141,16 +141,20 @@ void AStarManager::A_star_expand_neighbors(GridNode* GridNodePtr)
     for (int i=-1; i<=1; i++){
         for (int j=-1; j<=1; j++){
             for (int k=-1; k <= 1; k++){
-                if (i==0 && j==0 && k==0)
+                if (i==0 && j==0 && k==0) {
                     continue;
+                }
+                    
                 Eigen::Vector3i temp_idx = GridNodePtr->idx + Eigen::Vector3i(i, j, k);
                 GridNode* temp_ptr = GridNodeMap[temp_idx(0)][temp_idx(1)][temp_idx(2)];
                
                 if (is_obstacle(temp_idx) || temp_idx(0)<0 || temp_idx(0)>=max_x_idx \
-                                                  || temp_idx(1)<0 || temp_idx(1)>=max_y_idx \
-                                                  || temp_idx(2)<0 || temp_idx(2)>=max_z_idx \
-                                                  || temp_ptr->is_close)
+                                          || temp_idx(1)<0 || temp_idx(1)>=max_y_idx \
+                                          || temp_idx(2)<0 || temp_idx(2)>=max_z_idx \
+                                          || temp_ptr->is_close) {
                     continue;    // 当检查到的邻居栅格：1.是障碍物 2.超出界限 3.在close_list时，跳过
+                }
+                    
                 neighbor_ptr_set.emplace_back(temp_ptr);
                 edge_cost_set.emplace_back((GridNodePtr->coord - temp_ptr->coord).norm());
                 

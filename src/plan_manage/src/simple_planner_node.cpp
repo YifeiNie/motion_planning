@@ -14,16 +14,17 @@
 #include <visualization_msgs/MarkerArray.h>
 #include <visualization_msgs/Marker.h>
 
-#include "backward.hpp"
+// #include "backward.hpp"
 #include "A_star.h"
 #include "trajectory_optimization.h"
+#include "grid_map.h"
 
 using namespace std;
 using namespace Eigen;
 
-namespace backward {
-backward::SignalHandling sh;
-}
+// namespace backward {
+// backward::SignalHandling sh;
+// }
 
 // simulation param from launch file
 double _resolution, _inv_resolution, _cloud_margin;
@@ -43,7 +44,7 @@ ros::Publisher  _grid_path_vis_pub, _debug_nodes_vis_pub, _closed_nodes_vis_pub,
 //gridPathFinder * Astar_path_finder = new gridPathFinder();
 AStarManager * Astar_path_finder  = new AStarManager();
 Traj_opt * traj_opt = new Traj_opt();
-
+GridMap::Ptr grid_map;
 
 void rcvWaypointsCallback(const nav_msgs::Path & wp);
 void rcvPointCloudCallBack(const sensor_msgs::PointCloud2 & pointcloud_map);
@@ -74,14 +75,17 @@ void rcvWaypointsCallback(const nav_msgs::Path & wp)
     if (!is_path_found) {
         return;
     }
+    std::cout << "6666666666" << std::endl;
     std::vector<Eigen::Vector3d> grid_path = Astar_path_finder->get_path();
     std::vector<Eigen::Vector3d> path_main_point = Astar_path_finder->path_simplify(grid_path);
     visGridPath(path_main_point, false);
 
-    // 轨迹优化和碰撞检测
+    // // 轨迹优化和碰撞检测
+    std::cout << "0000000000" << std::endl;
     traj_opt->optimize(path_main_point);
     int safecheck_iter = 0;
     int unsafe_segment = Astar_path_finder->safeCheck(*traj_opt);
+    std::cout << "11111111111" << std::endl;
     while (unsafe_segment != -1) {
 
         if (safecheck_iter >= Astar_path_finder->max_safecheck_iter) { // 说明插入了很多也无法避免碰撞，只能忽略此处碰撞防止无限循环
@@ -102,7 +106,7 @@ void rcvWaypointsCallback(const nav_msgs::Path & wp)
 // 接受random_complex_generator发出的原始点云并转化为栅格地图
 void rcvPointCloudCallBack(const sensor_msgs::PointCloud2 & pointcloud_map)
 {
-    if(_has_map ) return;
+    // if(_has_map ) return;
 
     pcl::PointCloud<pcl::PointXYZ> cloud;
     pcl::PointCloud<pcl::PointXYZ> cloud_vis;
@@ -156,12 +160,14 @@ void rcvPointCloudCallBack(const sensor_msgs::PointCloud2 & pointcloud_map)
 
     _has_map = true;
 }
-
+// void cbk(const ros::TimerEvent& e){
+//     ROS_INFO("use %.4f secs", (ros::Time::now()).toSec());
+// }
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "plan_manage");
     ros::NodeHandle nh("~");
-    _map_sub  = nh.subscribe( "map",       1, rcvPointCloudCallBack );
+    _map_sub  = nh.subscribe( "/plan_manage/grid_map/occupancy_inflate",       1, rcvPointCloudCallBack );
     _pts_sub  = nh.subscribe( "waypoints", 1, rcvWaypointsCallback );
 
     _grid_map_vis_pub             = nh.advertise<sensor_msgs::PointCloud2>("grid_map_vis", 1);
@@ -193,16 +199,16 @@ int main(int argc, char** argv)
 
     Astar_path_finder -> init(nh, _resolution, _map_lower, _map_upper, _max_x_id, _max_y_id, _max_z_id);
     traj_opt->init(nh);
-
-    ros::Rate rate(100);
-    bool status = ros::ok();
-    while(status) 
-    {
-        ros::spinOnce();      
-        status = ros::ok();
-        rate.sleep();
-    }
-
+    // ros::Timer time_test = nh.createTimer(ros::Duration(0.1), cbk);
+    grid_map.reset(new GridMap);
+    grid_map->initMap(nh);
+    ros::spin();
+    // ros::Rate rate(100);
+    // while(ros::ok()) 
+    // {
+    //     ros::spinOnce();      
+    //     rate.sleep();
+    // }
     delete Astar_path_finder;
     return 0;
 }

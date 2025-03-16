@@ -3,9 +3,12 @@ project(mapping)
 
 ADD_COMPILE_OPTIONS(-std=c++11 )
 ADD_COMPILE_OPTIONS(-std=c++14 )
-set(CMAKE_BUILD_TYPE "Debug")	
-set(CMAKE_CXX_FLAGS "-g -O0")
 
+# set(CMAKE_BUILD_TYPE "Debug")	
+# set(CMAKE_CXX_FLAGS "-g -O0")
+
+set(CMAKE_BUILD_TYPE "Release")	
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 find_package(OpenCV REQUIRED)
 
 
@@ -21,7 +24,7 @@ find_package(Eigen3 REQUIRED)
 find_package(PCL 1.7 REQUIRED)
 
 catkin_package(
- INCLUDE_DIRS include
+ INCLUDE_DIRS include/mapping
  LIBRARIES  ${PROJECT_NAME}
  CATKIN_DEPENDS roscpp std_msgs
  DEPENDS OpenCV
@@ -42,7 +45,12 @@ link_directories(${PCL_LIBRARY_DIRS})
 file(GLOB SRC_FILES "src/*cpp")
 
 add_library(${PROJECT_NAME}
-               ${SRC_FILES}
+               src/grid_map.cpp
+               src/raycast.cpp
+)
+
+add_executable(mapping1
+              src/main.cpp
 )
 
 target_link_libraries( ${PROJECT_NAME}
@@ -50,4 +58,6 @@ target_link_libraries( ${PROJECT_NAME}
     ${PCL_LIBRARIES}
     ${OpenCV_LIBS}
     )  
-
+target_link_libraries( mapping1
+  ${catkin_LIBRARIES} 
+)  

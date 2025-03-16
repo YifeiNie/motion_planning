@@ -9,14 +9,14 @@ void GridMap::initMap(ros::NodeHandle &nh)
 
   /* get parameter */
   double x_size, y_size, z_size;
-  node_.param("grid_map/resolution", mp_.resolution_, -1.0);
-  node_.param("grid_map/map_size_x", x_size, -1.0);
-  node_.param("grid_map/map_size_y", y_size, -1.0);
-  node_.param("grid_map/map_size_z", z_size, -1.0);
-  node_.param("grid_map/local_update_range_x", mp_.local_update_range_(0), -1.0);
-  node_.param("grid_map/local_update_range_y", mp_.local_update_range_(1), -1.0);
-  node_.param("grid_map/local_update_range_z", mp_.local_update_range_(2), -1.0);
-  node_.param("grid_map/obstacles_inflation", mp_.obstacles_inflation_, -1.0);
+  node_.param("grid_map/resolution", mp_.resolution_, 0.15);
+  node_.param("grid_map/map_size_x", x_size, 50.0);
+  node_.param("grid_map/map_size_y", y_size, 50.0);
+  node_.param("grid_map/map_size_z", z_size, 5.0);
+  node_.param("grid_map/local_update_range_x", mp_.local_update_range_(0), 5.5);
+  node_.param("grid_map/local_update_range_y", mp_.local_update_range_(1), 5.5);
+  node_.param("grid_map/local_update_range_z", mp_.local_update_range_(2), 4.5);
+  node_.param("grid_map/obstacles_inflation", mp_.obstacles_inflation_, 0.299);
 
   node_.param("grid_map/fx", mp_.fx_, -1.0);
   node_.param("grid_map/fy", mp_.fy_, -1.0);
@@ -24,31 +24,31 @@ void GridMap::initMap(ros::NodeHandle &nh)
   node_.param("grid_map/cy", mp_.cy_, -1.0);
 
   node_.param("grid_map/use_depth_filter", mp_.use_depth_filter_, true);
-  node_.param("grid_map/depth_filter_tolerance", mp_.depth_filter_tolerance_, -1.0);
-  node_.param("grid_map/depth_filter_maxdist", mp_.depth_filter_maxdist_, -1.0);
-  node_.param("grid_map/depth_filter_mindist", mp_.depth_filter_mindist_, -1.0);
-  node_.param("grid_map/depth_filter_margin", mp_.depth_filter_margin_, -1);
-  node_.param("grid_map/k_depth_scaling_factor", mp_.k_depth_scaling_factor_, -1.0);
-  node_.param("grid_map/skip_pixel", mp_.skip_pixel_, -1);
+  node_.param("grid_map/depth_filter_tolerance", mp_.depth_filter_tolerance_, 0.15);
+  node_.param("grid_map/depth_filter_maxdist", mp_.depth_filter_maxdist_, 5.0);
+  node_.param("grid_map/depth_filter_mindist", mp_.depth_filter_mindist_, 0.2);
+  node_.param("grid_map/depth_filter_margin", mp_.depth_filter_margin_, 2);
+  node_.param("grid_map/k_depth_scaling_factor", mp_.k_depth_scaling_factor_, 1000.0);
+  node_.param("grid_map/skip_pixel", mp_.skip_pixel_, 2);
 
-  node_.param("grid_map/p_hit", mp_.p_hit_, 0.70);
+  node_.param("grid_map/p_hit", mp_.p_hit_, 0.65);
   node_.param("grid_map/p_miss", mp_.p_miss_, 0.35);
   node_.param("grid_map/p_min", mp_.p_min_, 0.12);
-  node_.param("grid_map/p_max", mp_.p_max_, 0.97);
+  node_.param("grid_map/p_max", mp_.p_max_, 0.90);
   node_.param("grid_map/p_occ", mp_.p_occ_, 0.80);
-  node_.param("grid_map/min_ray_length", mp_.min_ray_length_, -0.1);
-  node_.param("grid_map/max_ray_length", mp_.max_ray_length_, -0.1);
+  node_.param("grid_map/min_ray_length", mp_.min_ray_length_, 0.3);
+  node_.param("grid_map/max_ray_length", mp_.max_ray_length_, 5.0);
 
-  node_.param("grid_map/visualization_truncate_height", mp_.visualization_truncate_height_, -0.1);
+  node_.param("grid_map/visualization_truncate_height", mp_.visualization_truncate_height_, 1.8);
   node_.param("grid_map/virtual_ceil_yp", mp_.virtual_ceil_yp_, -0.1);
   node_.param("grid_map/virtual_ceil_yn", mp_.virtual_ceil_yn_, -0.1);
 
   node_.param("grid_map/show_occ_time", mp_.show_occ_time_, false);
-  node_.param("grid_map/pose_type", mp_.pose_type_, 1);
+  node_.param("grid_map/pose_type", mp_.pose_type_, 2);
 
   node_.param("grid_map/frame_id", mp_.frame_id_, string("world"));
-  node_.param("grid_map/local_map_margin", mp_.local_map_margin_, 1);
-  node_.param("grid_map/ground_height", mp_.ground_height_, 1.0);
+  node_.param("grid_map/local_map_margin", mp_.local_map_margin_, 10);
+  node_.param("grid_map/ground_height", mp_.ground_height_, -0.01);
 
   node_.param("grid_map/odom_depth_timeout", mp_.odom_depth_timeout_, 1.0);
 
@@ -99,7 +99,7 @@ void GridMap::initMap(ros::NodeHandle &nh)
 
   /* init callback */
   // 订阅深度图像数据和相机外参用于建图
-  depth_sub_.reset(new message_filters::Subscriber<sensor_msgs::Image>(node_, "grid_map/depth", 50));
+  depth_sub_.reset(new message_filters::Subscriber<sensor_msgs::Image>(node_, "/camera/depth/image_rect_raw", 50));
   extrinsic_sub_ = node_.subscribe<nav_msgs::Odometry>("/vins_fusion/extrinsic", 10, &GridMap::extrinsicCallback, this); //sub
 
   if (mp_.pose_type_ == POSE_STAMPED)
@@ -113,10 +113,9 @@ void GridMap::initMap(ros::NodeHandle &nh)
   }
   else if (mp_.pose_type_ == ODOMETRY)
   {
-    odom_sub_.reset(new message_filters::Subscriber<nav_msgs::Odometry>(node_, "grid_map/odom", 100, ros::TransportHints().tcpNoDelay()));
+    odom_sub_.reset(new message_filters::Subscriber<nav_msgs::Odometry>(node_, "/vins_fusion/imu_propagate", 100, ros::TransportHints().tcpNoDelay()));
 
-    sync_image_odom_.reset(new message_filters::Synchronizer<SyncPolicyImageOdom>(
-        SyncPolicyImageOdom(100), *depth_sub_, *odom_sub_));
+    sync_image_odom_.reset(new message_filters::Synchronizer<SyncPolicyImageOdom>(SyncPolicyImageOdom(100), *depth_sub_, *odom_sub_));
     sync_image_odom_->registerCallback(boost::bind(&GridMap::depthOdomCallback, this, _1, _2));
   }
 
@@ -127,7 +126,7 @@ void GridMap::initMap(ros::NodeHandle &nh)
       node_.subscribe<nav_msgs::Odometry>("grid_map/odom", 10, &GridMap::odomCallback, this);
 
   occ_timer_ = node_.createTimer(ros::Duration(0.05), &GridMap::updateOccupancyCallback, this);
-  vis_timer_ = node_.createTimer(ros::Duration(0.11), &GridMap::visCallback, this);
+  vis_timer_ = node_.createTimer(ros::Duration(0.1), &GridMap::visCallback, this);
 
   map_pub_ = node_.advertise<sensor_msgs::PointCloud2>("grid_map/occupancy", 10);
   map_inf_pub_ = node_.advertise<sensor_msgs::PointCloud2>("grid_map/occupancy_inflate", 10);
@@ -640,7 +639,9 @@ void GridMap::clearAndInflateLocalMap()
 
 void GridMap::visCallback(const ros::TimerEvent & /*event*/)
 {
-
+  // static double temp = 0;
+  // temp = (ros::Time::now()).toSec();
+  // ROS_INFO("use %.4f secs", (ros::Time::now()).toSec() - temp);
   publishMapInflate(true);
   publishMap();
 }
@@ -886,7 +887,7 @@ void GridMap::publishMap()
 
 void GridMap::publishMapInflate(bool all_info)
 {
-
+  // ros::Time time1 = ros::Time::now();
   if (map_inf_pub_.getNumSubscribers() <= 0)
     return;
 
@@ -932,8 +933,8 @@ void GridMap::publishMapInflate(bool all_info)
 
   pcl::toROSMsg(cloud, cloud_msg);
   map_inf_pub_.publish(cloud_msg);
-
-  // ROS_INFO("pub map");
+  
+  // ROS_INFO("use %.4f secs", (time1 - ros::Time::now()).toSec());
 }
 
 bool GridMap::odomValid() { return md_.has_odom_; }

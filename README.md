@@ -12,3 +12,4 @@
 - 需要在package.xml文件里声明依赖就可以避免这种问题
 - 由于头文件互相引用的问题，更新内容后可能出现找不到头文件的问题，记得不要仅仅修改新增内容的cmakelist，依赖它的package的cmakelist也要修改
 - CMakeLists.txt如果使用`file(GLOB SRC_FILES "src/*cpp")`，再添加新文件后并不会自动更新cpp文件列表，需要修改CMakeLists.txt，比如加一个回车，这样完全重新编译，才会重新寻找cpp文件
+- 编译时注意要使用release模式，并开启o3编译优化，否则定时器回调的触发频率会远低于设定频率

@@ -8,17 +8,17 @@ void Traj_opt::init(ros::NodeHandle &nh)
     visualizer = std::make_unique<Visualizer>(nh);
     max_vel = nh.param("Opt/max_vel", 0.5);
     max_acc = nh.param("Opt/max_acc", 0.5);
-    order = nh.param("Opt/order", 3);
+    order = nh.param("Opt/order", 4);
     axis = nh.param("Opt/axis", 3);
 
     poly_order = 2 * order - 1;
     p_num = poly_order + 1;
     traj_start_time= ros::TIME_MAX;
 
-    odom_pos = Eigen::VectorXd::Zero(order);
+    odom_pos = Eigen::VectorXd::Zero(axis);
     odom_pos(2) = 2;
-    odom_vel = Eigen::VectorXd::Zero(order);
-    odom_acc = Eigen::VectorXd::Zero(order);
+    odom_vel = Eigen::VectorXd::Zero(axis);
+    odom_acc = Eigen::VectorXd::Zero(axis);
 
     odom_sub = nh.subscribe<nav_msgs::Odometry>("/vins_fusion/odometry", 1, boost::bind(&Traj_opt::odom_rcv_callback, this, _1));  
 }
@@ -262,7 +262,7 @@ void Traj_opt::Visualize(std::vector<Eigen::Vector3d> &path)
     traj.reserve(num_segments);
     for (int i = 0; i < num_segments; i++)
     {
-        traj.emplace_back(time(i), coef_mat_vis.block<6, 3>(6 * i, 0).transpose().rowwise().reverse());
+        traj.emplace_back(time(i), coef_mat_vis.block<8, 3>(8 * i, 0).transpose().rowwise().reverse());
     }
 
     int cols = path.size();
@@ -295,16 +295,6 @@ Eigen::Vector3d Traj_opt::getPos(Eigen::MatrixXd polyCoeff, int k, double t) {
         }
     }
     return ret;
-}
-
-void Traj_opt::change_state(STATE new_state) {
-    int old_state = int(state);
-    state = new_state;
-    std::cout << "[state]: from " + state_str[old_state] + " to " + state_str[int(new_state)] << std::endl;
-}
-
-void Traj_opt::print_state() {
-  std::cout << "[State]: " + state_str[int(state)] << std::endl;
 }
 
 void Traj_opt::odom_rcv_callback(nav_msgs::OdometryConstPtr msg)

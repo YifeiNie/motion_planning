@@ -142,7 +142,7 @@ class GridMap {
 public:
   GridMap() {}
   ~GridMap() {}
-
+void visCallback(const ros::TimerEvent& /*event*/);
   enum { POSE_STAMPED = 1, ODOMETRY = 2, INVALID_IDX = -10000 };
 
   // occupancy map management
@@ -201,7 +201,7 @@ private:
 
   // update occupancy by raycasting
   void updateOccupancyCallback(const ros::TimerEvent& /*event*/);
-  void visCallback(const ros::TimerEvent& /*event*/);
+  
 
   // main update process
   void projectDepthImage();

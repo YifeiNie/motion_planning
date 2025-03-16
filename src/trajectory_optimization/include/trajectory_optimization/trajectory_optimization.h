@@ -11,14 +11,6 @@
 #include "quad_msgs/Target.h"
 #include "quad_msgs/Des_target.h"
 
-enum STATE {
-    INIT,
-    WAIT_TARGET,
-    GEN_NEW_TRAJ,
-    EXEC_TRAJ,
-    REPLAN_TRAJ
-};
-
     
 class Traj_opt{
 public:
@@ -29,8 +21,6 @@ public:
     int p_num;
     double max_vel, max_acc;
     int axis;
-    STATE state;
-    std::string state_str[5] = {"INIT", "WAIT_TARGET", "GEN_NEW_TRAJ", "EXEC_TRAJ", "REPLAN_TRAJ"};
 
     // 当前状态
     bool has_odom;
@@ -59,15 +49,14 @@ public:
     Eigen::MatrixX3d resize_coeff(std::vector<Eigen::VectorXd> P_coef_vec);
     Eigen::Vector3d getPos(Eigen::MatrixXd polyCoeff, int k, double t);
     void Visualize(std::vector<Eigen::Vector3d> &path);
-    void change_state(STATE new_state);
-    void print_state();                                     // 定期执行
+    
     void odom_rcv_callback(nav_msgs::OdometryConstPtr msg);        // 用于获取轨迹规划的初始的pos，vel，和acc
     void optimize(std::vector<Eigen::Vector3d> path_main_point);
     void reset();
 
 private:
     std::unique_ptr<Visualizer> visualizer;
-    Trajectory<5> traj;
+    Trajectory<7> traj;
 
 };
 
