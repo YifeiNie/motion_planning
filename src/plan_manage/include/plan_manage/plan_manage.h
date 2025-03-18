@@ -14,11 +14,14 @@ enum STATE {
 
 class Plan_manage {
 private:
-    bool has_target;
+    double no_plan_thresh;
+    double target_thresh;
+    bool has_new_target;
     Eigen::Vector3d target_pt;
     ros::Timer FSM_task_timer;
+    ros::Subscriber pts_sub;
 
-    ros::Subscirber odom_sub;
+    // ros::Subscriber odom_sub;
 public:
     STATE state;
     std::string state_str[5] = {"INIT", "WAIT_TARGET", "GEN_NEW_TRAJ", "EXEC_TRAJ", "REPLAN_TRAJ"};
@@ -28,7 +31,8 @@ public:
     void change_state(STATE new_state);
     void print_state();                                     // 定期执行    
 
-    void rcvWaypointsCallback(const nav_msgs::Path & wp);
-    void rcvOdomCallback(nav_msgs::OdometryConstPtr msg);        // 用于获取轨迹规划的初始的pos，vel，和acc
-    void trajGen();
+    void rcvWaypointsCallback(nav_msgs::PathConstPtr wp);
+    // void rcvOdomCallback(nav_msgs::OdometryConstPtr msg);        // 用于获取轨迹规划的初始的pos，vel，和acc
+    bool trajGen();
+    void emergencyStop();
 };

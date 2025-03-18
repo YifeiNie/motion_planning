@@ -1,9 +1,13 @@
+
+#include <visualization_msgs/MarkerArray.h>
+#include <visualization_msgs/Marker.h>
 #include <ros/ros.h>
 #include <ros/console.h>
 #include <cmath>
-
+#include <math.h>
 // #include "backward.hpp"
 #include "A_star.h"
+
 
 #ifdef USE_A_STAR
 
@@ -21,33 +25,42 @@ GridNode::GridNode(Eigen::Vector3i idx, Eigen::Vector3d coord)
 }
 
 // 初始化
-void AStarManager::init(ros::NodeHandle &nh, double resolution, Eigen::Vector3d min_coord, Eigen::Vector3d max_coord, int max_x_idx, int max_y_idx, int max_z_idx)
-{
-    nh.param("path/resolution", path_resolution, 0.1);
-    nh.param("path/delta_t", delta_t, path_resolution / 2.0);
-    nh.param("path/delta_t", max_safecheck_iter, 4);
+void AStarManager::init(ros::NodeHandle &nh)
+{   
+    nh.param("A_star/cloud_margin", cloud_margin, 0.0);
+    nh.param("A_star/path_resolution", path_resolution, 0.1);
+    nh.param("A_star/delta_t", delta_t, path_resolution / 2.0);
+    nh.param("A_star/max_safecheck_iter", max_safecheck_iter, 4);
+    nh.param("A_star/resolution", resolution, 0.15);
+    nh.param("A_star/x_size", x_size, 30.0);
+    nh.param("A_star/y_size", y_size, 30.0);
+    nh.param("A_star/z_size", z_size, 5.0);
 
-    this->resolution = resolution;
-    inv_resolution = 1.0 / resolution; 
+    pointcloud_sub  = nh.subscribe<sensor_msgs::PointCloud2>("/plan_manage/grid_map/occupancy_inflate", 1, boost::bind(&AStarManager::rcvPointCloudCallBack, this, _1));
+    grid_path_vis_pub = nh.advertise<visualization_msgs::Marker>("grid_path_vis", 1);
+    grid_map_vis_pub = nh.advertise<sensor_msgs::PointCloud2>("grid_map_vis", 1);
     
     neighbor_ptr_set.clear();
     edge_cost_set.clear();
 
-    max_x_coord = max_coord(0);
-    max_y_coord = max_coord(1);
-    max_z_coord = max_coord(2);
+    this->max_x_coord = x_size / 2.0;
+    this->max_y_coord = y_size / 2.0;
+    this->max_z_coord = z_size;
 
-    min_x_coord = min_coord(0);
-    min_y_coord = min_coord(1);
-    min_z_coord = min_coord(2);
+    this->min_x_coord = -x_size / 2.0;
+    this->min_y_coord = -y_size / 2.0;
+    this->min_z_coord = 0;
+
+    this->inv_resolution = 1.0 / resolution;
 
     // 由于访问数组的索引是从0开始，所以后面进行遍历时候是"< max_x_idx"而不是"<= max_x_idx"
-    this->max_x_idx = max_x_idx;
-    this->max_y_idx = max_y_idx;
-    this->max_z_idx = max_z_idx;
-    max_yz_idx = max_y_idx * max_z_idx;
+    this->max_x_idx = (int)(x_size * inv_resolution);
+    this->max_y_idx = (int)(y_size * inv_resolution);
+    this->max_z_idx = (int)(z_size * inv_resolution);
+
     // 计算栅格总数
-    grid_num = max_x_idx * max_y_idx * max_z_idx;
+    this->max_yz_idx = max_y_idx * max_z_idx; 
+    this->grid_num = max_x_idx * max_y_idx * max_z_idx;
 
     obstacle_map = new uint8_t[grid_num];
     memset(obstacle_map, 0, grid_num * sizeof(uint8_t));
@@ -83,7 +96,6 @@ void AStarManager::reset_grid()
         }
     }
 }
-
 
 // 返回某个栅格是否为障碍物栅格
 inline bool AStarManager::is_obstacle(Eigen::Vector3i idx)
@@ -253,6 +265,7 @@ std::vector<Eigen::Vector3d> AStarManager::get_path()
         path.push_back(ptr->coord);
         ptr = ptr->father;
     }  
+    path.push_back(ptr->coord);  // 注意第一次出现父节点为空时说明回溯到起点，也需要放入路径
     std::reverse(path.begin(), path.end());
     return path;
 }
@@ -288,7 +301,7 @@ std::vector<Eigen::Vector3d> AStarManager::path_simplify(const std::vector<Eigen
     std::vector<Eigen::Vector3d> recPath1;
     std::vector<Eigen::Vector3d> recPath2;
     std::vector<Eigen::Vector3d> resultPath;
-    if(dmax>path_resolution)
+    if(dmax > path_resolution)
     {
         recPath1 = path_simplify(subPath1);
         recPath2 = path_simplify(subPath2);
@@ -349,6 +362,112 @@ int AStarManager::safeCheck(Traj_opt &traj_opt) {
 Eigen::Vector3d AStarManager::coordRounding(const Eigen::Vector3d &coord)
 {
     return idx2coord(coord2idx(coord));
+}
+
+void AStarManager::visGridPath(std::vector<Eigen::Vector3d> nodes, bool is_use_jps)
+{   
+    visualization_msgs::Marker node_vis; 
+    node_vis.header.frame_id = "world";
+    node_vis.header.stamp = ros::Time::now();
+    
+    if(is_use_jps)
+        node_vis.ns = "plan_manage/jps_path";
+    else
+        node_vis.ns = "plan_manage/astar_path";
+
+    node_vis.type = visualization_msgs::Marker::CUBE_LIST;
+    node_vis.action = visualization_msgs::Marker::ADD;
+    node_vis.id = 0;
+
+    node_vis.pose.orientation.x = 0.0;
+    node_vis.pose.orientation.y = 0.0;
+    node_vis.pose.orientation.z = 0.0;
+    node_vis.pose.orientation.w = 1.0;
+
+    if (is_use_jps){
+        node_vis.color.a = 1.0;
+        node_vis.color.r = 1.0;
+        node_vis.color.g = 0.0;
+        node_vis.color.b = 0.0;
+    }
+    else{
+        node_vis.color.a = 1.0;
+        node_vis.color.r = 0.0;
+        node_vis.color.g = 1.0;
+        node_vis.color.b = 0.0;
+    }
+
+
+    node_vis.scale.x = resolution;
+    node_vis.scale.y = resolution;
+    node_vis.scale.z = resolution;
+
+    geometry_msgs::Point pt;
+    for(int i = 0; i < int(nodes.size()); i++)
+    {
+        Eigen::Vector3d coord = nodes[i];
+        pt.x = coord(0);
+        pt.y = coord(1);
+        pt.z = coord(2);
+
+        node_vis.points.push_back(pt);
+    }
+
+    grid_path_vis_pub.publish(node_vis);
+}
+
+void AStarManager::rcvPointCloudCallBack(sensor_msgs::PointCloud2ConstPtr pointcloud_map)
+{
+    pcl::PointCloud<pcl::PointXYZ> cloud;
+    pcl::PointCloud<pcl::PointXYZ> cloud_vis;
+    sensor_msgs::PointCloud2 map_vis;
+
+    pcl::fromROSMsg(*pointcloud_map, cloud);
+    
+    if ((int)cloud.points.size() == 0 ) 
+    {
+        std::cout << "Point cloud is enpty!" << std::endl;
+        return;
+    }
+    // 遍历点云，并对每个点进行扩展操作，即对一个点的xyz都加减若干距离，然后根据分辨率确定扩展的点的个数
+    pcl::PointXYZ pt, pt_inf;
+    int inf_step   = round(cloud_margin * inv_resolution);
+    int inf_step_z = std::max(1, inf_step / 2);
+    for (int idx = 0; idx < (int)cloud.points.size(); idx++)
+    {    
+        pt = cloud.points[idx];        
+        for(int x = -inf_step ; x <= inf_step; x ++ )
+        {
+            for(int y = -inf_step ; y <= inf_step; y ++ )
+            {
+                for(int z = -inf_step_z; z <= inf_step_z; z ++ )
+                {
+                    double inf_x = pt.x + x * resolution;
+                    double inf_y = pt.y + y * resolution;
+                    double inf_z = pt.z + z * resolution;
+                    setObs(inf_x, inf_y, inf_z);
+
+                    Eigen::Vector3d cor_inf = coordRounding(Eigen::Vector3d(inf_x, inf_y, inf_z));
+
+                    pt_inf.x = cor_inf(0);
+                    pt_inf.y = cor_inf(1);
+                    pt_inf.z = cor_inf(2);
+                    cloud_vis.points.push_back(pt_inf);
+
+                }
+            }
+        }
+    }
+
+    cloud_vis.width    = cloud_vis.points.size();
+    cloud_vis.height   = 1;
+    cloud_vis.is_dense = true;
+
+    pcl::toROSMsg(cloud_vis, map_vis);
+
+    map_vis.header.frame_id = "world";
+    grid_map_vis_pub.publish(map_vis);
+
 }
 
 #endif

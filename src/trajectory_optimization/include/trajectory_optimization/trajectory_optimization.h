@@ -14,7 +14,8 @@
     
 class Traj_opt{
 public:
-
+    std::unique_ptr<Visualizer> visualizer;
+    
     bool coeff_ready;
     int order;
     int poly_order;
@@ -24,7 +25,6 @@ public:
 
     // 当前状态
     bool has_odom;
-    bool has_target;
     Eigen::VectorXd odom_pos;
     Eigen::VectorXd odom_vel; 
     Eigen::VectorXd odom_acc;
@@ -44,18 +44,18 @@ public:
     void init(ros::NodeHandle &nh);
     int factorial(int x);
     Eigen::VectorXd time_allocation(std::vector<Eigen::Vector3d> &path);  // 时间分配
-    bool traj_gen(const std::vector<Eigen::MatrixXd> &data);
+    bool calCoeffMat(const std::vector<Eigen::MatrixXd> &data);
     std::vector<Eigen::MatrixXd> data_config(std::vector<Eigen::Vector3d> &path);
     Eigen::MatrixX3d resize_coeff(std::vector<Eigen::VectorXd> P_coef_vec);
     Eigen::Vector3d getPos(Eigen::MatrixXd polyCoeff, int k, double t);
     void Visualize(std::vector<Eigen::Vector3d> &path);
     
     void odom_rcv_callback(nav_msgs::OdometryConstPtr msg);        // 用于获取轨迹规划的初始的pos，vel，和acc
-    void optimize(std::vector<Eigen::Vector3d> path_main_point);
+    bool optimize(std::vector<Eigen::Vector3d> path_main_point);
     void reset();
 
 private:
-    std::unique_ptr<Visualizer> visualizer;
+    
     Trajectory<7> traj;
 
 };

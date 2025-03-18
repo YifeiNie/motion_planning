@@ -24,8 +24,8 @@ private:
 
     ros::Publisher wayPointsPub;
     ros::Publisher trajectoryPub;
-    ros::Publisher target_pub;
 public:
+    ros::Publisher target_pub;
     Visualizer(ros::NodeHandle &nh_)
         : nh(nh_)
     {
@@ -38,6 +38,7 @@ public:
     inline void visualize(const Trajectory<D> &traj,
                           const Eigen::Matrix3Xd &route)
     {
+        static int cnt = 0;
         visualization_msgs::Marker wayPointsMarker;
         visualization_msgs::Marker trajMarker;
         quad_msgs::Target target;
@@ -121,13 +122,20 @@ public:
 
                 yaw.data[0] = atan2(vel.y(), vel.x());;
 
-                // push_back 到消息中
-                target.pos.push_back(p);
-                target.vel.push_back(v);
-                target.acc.push_back(a);
-                target.yaw.push_back(yaw);
+                if (cnt >= 5)
+                {
+                    // push_back 到消息中
+                    target.pos.push_back(p);
+                    target.vel.push_back(v);
+                    target.acc.push_back(a);
+                    target.yaw.push_back(yaw);
+                    cnt = 0;
+                }
+                ++cnt;
+
             }
             trajectoryPub.publish(trajMarker);
+            target.is_traj_safe = true;
             target_pub.publish(target);
         }
         else

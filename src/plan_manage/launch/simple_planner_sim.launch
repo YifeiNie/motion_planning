@@ -2,30 +2,27 @@
 
     <arg name="map_size_x" default="30.0"/>
     <arg name="map_size_y" default="20.0"/>
-    <arg name="map_size_z" default=" 5.0"/>
+    <arg name="map_size_z" default="5.0"/>
 
-    <arg name="start_x" default=" 0.0"/>
-    <arg name="start_y" default=" 0.0"/>
-    <arg name="start_z" default=" 1.0"/>
     <arg name="cx" value="321.04638671875"/>
     <arg name="cy" value="243.44969177246094"/>
     <arg name="fx" value="387.229248046875"/>
     <arg name="fy" value="387.229248046875"/>
+
     <node pkg="rviz" type="rviz" name="rivz" args="-d $(find plan_manage)/launch/rviz_config/demo.rviz" />
 
     <node pkg="plan_manage" type="plan_manage" name="plan_manage" output="screen" required = "true">
         <remap from="~waypoints" to="/waypoint_generator/waypoints"/>
-        <remap from="~map" to="/random_complex/global_map"/>
 
-        <param name="map/margin" value="0.0" />
-        <param name="map/resolution" value="0.2" />
-        <param name="map/x_size" value="$(arg map_size_x)"/>
-        <param name="map/y_size" value="$(arg map_size_y)"/>
-        <param name="map/z_size" value="$(arg map_size_z)"/>
+        <param name="A_star/margin" value="0.0" />
+        <param name="A_star/resolution" value="0.15" />
+        <param name="A_star/path_resolution" value="0.1" />
+        <param name="A_star/max_safecheck_iter" value="4" />
+        <param name="A_star/x_size" value="$(arg map_size_x)"/>
+        <param name="A_star/y_size" value="$(arg map_size_y)"/>
+        <param name="A_star/z_size" value="$(arg map_size_z)"/>
+        <!-- <param name="A_star/delta_t" value="0.001"/> -->
 
-        <param name="planning/start_x" value="$(arg start_x)"/>
-        <param name="planning/start_y" value="$(arg start_y)"/>
-        <param name="planning/start_z" value="$(arg start_z)"/>
         <param name="path/resolution"  value="0.15"/>
 
         <param name="grid_map/resolution"      value="0.15" /> 

@@ -90,7 +90,7 @@ std::vector<Eigen::MatrixXd> Traj_opt::data_config(std::vector<Eigen::Vector3d> 
 }
 
 
-bool Traj_opt::traj_gen(const std::vector<Eigen::MatrixXd> &data)
+bool Traj_opt::calCoeffMat(const std::vector<Eigen::MatrixXd> &data)
 {
     coeff_ready = false;
     int time_seg_num = time.size();
@@ -271,8 +271,8 @@ void Traj_opt::Visualize(std::vector<Eigen::Vector3d> &path)
     for (int i = 0; i < cols; ++i) {
         Path.col(i) = path[i].transpose();
     }
-    std::cout << Path << std::endl;
-    std::cout << coef_mat_vis << std::endl;
+    // std::cout << Path << std::endl;
+    // std::cout << coef_mat_vis << std::endl;
     visualizer->visualize(traj, Path);
 }
 
@@ -310,11 +310,16 @@ void Traj_opt::odom_rcv_callback(nav_msgs::OdometryConstPtr msg)
     has_odom = true;    
 }
 
-void Traj_opt::optimize(std::vector<Eigen::Vector3d> path_main_point)
+bool Traj_opt::optimize(std::vector<Eigen::Vector3d> path_main_point)
 {
+    if (path_main_point.size() == 1) {
+        std::cout << "[trajectory_optimization] Current and target are in the same grid, invalid target!" << std::endl;
+        return false;
+    }
     reset();
     time = time_allocation(path_main_point);
     std::vector<Eigen::MatrixXd> data = data_config(path_main_point);    
-    traj_gen(data);
+    bool ret = calCoeffMat(data);
+    return ret;
 }
 

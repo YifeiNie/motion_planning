@@ -178,7 +178,7 @@ void goal_callback(const geometry_msgs::PoseStamped::ConstPtr& msg) {
             publish_waypoints_vis();
             publish_waypoints();
         } else {
-            ROS_WARN("[waypoint_generator] invalid goal in manual-lonely-waypoint mode.");
+            ROS_WARN("[waypoint_generator] z is smaller than zero, invalid goal!");
         }
     } else {
         if (msg->pose.position.z > 0) {

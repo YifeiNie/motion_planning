@@ -6,4 +6,5 @@ std_msgs/Float64MultiArray[] acc
 
 std_msgs/Float64MultiArray[] yaw
 
+bool is_traj_safe
 string debug_info

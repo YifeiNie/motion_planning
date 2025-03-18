@@ -39,7 +39,9 @@ file(GLOB SRC_FILES "src/*cpp")
 #                 ${SRC_FILES} )
 
 add_executable ( ${PROJECT_NAME} 
-                src/simple_planner_node.cpp )
+                src/planner_FSM.cpp 
+                src/simple_planner_node.cpp
+)
 
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}

@@ -1,6 +1,10 @@
 #pragma once
 #include <Eigen/Eigen>
 #include "trajectory_optimization.h"
+#include <sensor_msgs/PointCloud2.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
 
 #define USE_A_STAR
 
@@ -32,6 +36,7 @@ class AStarManager
 private: 
     double path_resolution;
     double delta_t;
+    double cloud_margin;
 
     GridNode ****GridNodeMap;
     uint8_t *obstacle_map;     // 一个三维映射到一维的数组，存储的0或1表示当前索引的栅格是否有障碍物
@@ -40,8 +45,7 @@ private:
     std::vector<GridNode*> neighbor_ptr_set;
     std::vector<double> edge_cost_set;
     GridNode *final_node_ptr;
-
-    float rezolution;
+    double x_size, y_size, z_size;
     float max_x_coord, max_y_coord, max_z_coord;   // 坐标值，
     float min_x_coord, min_y_coord, min_z_coord;
 
@@ -60,8 +64,11 @@ private:
 
 public:
     int max_safecheck_iter;
+    ros::Publisher grid_path_vis_pub;
+    ros::Publisher grid_map_vis_pub;
+    ros::Subscriber pointcloud_sub;
 
-    void init(ros::NodeHandle &nh, double resolution, Eigen::Vector3d max_coord, Eigen::Vector3d min_coord, int max_x_idx, int max_y_idx, int max_z_idx);
+    void init(ros::NodeHandle &nh);
     inline Eigen::Vector3i coord2idx(Eigen::Vector3d coord);
     inline Eigen::Vector3d idx2coord(Eigen::Vector3i idx);
     void set_obstacle(Eigen::Vector3i idx);
@@ -75,6 +82,8 @@ public:
     std::vector<Eigen::Vector3d> path_simplify(const std::vector<Eigen::Vector3d> &path);
     int safeCheck(Traj_opt &traj_opt);
     void reset_grid();
+    void visGridPath(std::vector<Eigen::Vector3d> nodes, bool is_use_jps );
+    void rcvPointCloudCallBack(sensor_msgs::PointCloud2ConstPtr pointcloud_map);
 };
 
 #endif

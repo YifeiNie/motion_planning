@@ -1,6 +1,5 @@
 #include <iostream>
 #include <fstream>
-#include <math.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -18,6 +17,7 @@
 #include "A_star.h"
 #include "trajectory_optimization.h"
 #include "grid_map.h"
+#include "plan_manage.h"
 
 using namespace std;
 using namespace Eigen;
@@ -44,6 +44,7 @@ ros::Publisher  _grid_path_vis_pub, _debug_nodes_vis_pub, _closed_nodes_vis_pub,
 //gridPathFinder * Astar_path_finder = new gridPathFinder();
 AStarManager * Astar_path_finder  = new AStarManager();
 Traj_opt * traj_opt = new Traj_opt();
+Plan_manage * plan_manage = new Plan_manage();
 GridMap::Ptr grid_map;
 
 void rcvWaypointsCallback(const nav_msgs::Path & wp);
@@ -75,17 +76,15 @@ void rcvWaypointsCallback(const nav_msgs::Path & wp)
     if (!is_path_found) {
         return;
     }
-    std::cout << "6666666666" << std::endl;
     std::vector<Eigen::Vector3d> grid_path = Astar_path_finder->get_path();
     std::vector<Eigen::Vector3d> path_main_point = Astar_path_finder->path_simplify(grid_path);
     visGridPath(path_main_point, false);
 
     // // 轨迹优化和碰撞检测
-    std::cout << "0000000000" << std::endl;
     traj_opt->optimize(path_main_point);
     int safecheck_iter = 0;
     int unsafe_segment = Astar_path_finder->safeCheck(*traj_opt);
-    std::cout << "11111111111" << std::endl;
+
     while (unsafe_segment != -1) {
 
         if (safecheck_iter >= Astar_path_finder->max_safecheck_iter) { // 说明插入了很多也无法避免碰撞，只能忽略此处碰撞防止无限循环
@@ -167,8 +166,8 @@ int main(int argc, char** argv)
 {
     ros::init(argc, argv, "plan_manage");
     ros::NodeHandle nh("~");
-    _map_sub  = nh.subscribe( "/plan_manage/grid_map/occupancy_inflate",       1, rcvPointCloudCallBack );
-    _pts_sub  = nh.subscribe( "waypoints", 1, rcvWaypointsCallback );
+    _map_sub  = nh.subscribe( "/plan_manage/grid_map/occupancy_inflate", 1, rcvPointCloudCallBack);
+    // _pts_sub  = nh.subscribe( "waypoints", 1, rcvWaypointsCallback );
 
     _grid_map_vis_pub             = nh.advertise<sensor_msgs::PointCloud2>("grid_map_vis", 1);
     _grid_path_vis_pub            = nh.advertise<visualization_msgs::Marker>("grid_path_vis", 1);
@@ -177,32 +176,14 @@ int main(int argc, char** argv)
     _open_nodes_vis_pub           = nh.advertise<visualization_msgs::Marker>("open_nodes_vis",     1);
     _close_nodes_sequence_vis_pub = nh.advertise<visualization_msgs::Marker>("close_nodes_sequence_vis", 10);
 
-    nh.param("map/cloud_margin",  _cloud_margin, 0.0);
-    nh.param("map/resolution",    _resolution,   0.2);
-    
-    nh.param("map/x_size",        _x_size, 50.0);
-    nh.param("map/y_size",        _y_size, 50.0);
-    nh.param("map/z_size",        _z_size, 5.0 );
-    
-    nh.param("planning/start_x",  _start_pt(0),  0.0);
-    nh.param("planning/start_y",  _start_pt(1),  0.0);
-    nh.param("planning/start_z",  _start_pt(2),  0.0);
-
-    _map_lower << - _x_size/2.0, - _y_size/2.0,     0.0;
-    _map_upper << + _x_size/2.0, + _y_size/2.0, _z_size;
-    
-    _inv_resolution = 1.0 / _resolution;
-    
-    _max_x_id = (int)(_x_size * _inv_resolution);
-    _max_y_id = (int)(_y_size * _inv_resolution);
-    _max_z_id = (int)(_z_size * _inv_resolution);
-
-    Astar_path_finder -> init(nh, _resolution, _map_lower, _map_upper, _max_x_id, _max_y_id, _max_z_id);
+    // 初始化A_star，后端优化和建图模块
+    Astar_path_finder->init(nh);
     traj_opt->init(nh);
-    // ros::Timer time_test = nh.createTimer(ros::Duration(0.1), cbk);
+    plan_manage->init(nh);
     grid_map.reset(new GridMap);
     grid_map->initMap(nh);
     ros::spin();
+
     // ros::Rate rate(100);
     // while(ros::ok()) 
     // {
@@ -210,6 +191,8 @@ int main(int argc, char** argv)
     //     rate.sleep();
     // }
     delete Astar_path_finder;
+    delete traj_opt;
+    // delete grid_map;
     return 0;
 }
 
