@@ -330,11 +330,11 @@ inline double AStarManager::calculate_d(const Eigen::Vector3d insert, const Eige
     return double(line2.cross(line1).norm()/line1.norm());
 }
 
-int AStarManager::safeCheck(Traj_opt &traj_opt) {
+int AStarManager::safeCheck(Traj_opt &traj_opt, int skip_seg_num) {
     int unsafe_segment = -1;        // -1表示多项式轨迹安全无碰撞
     std::vector<Eigen::VectorXd> P_coef_vec = traj_opt.P_coef_vec;
     Eigen::MatrixX3d polyCoeff = traj_opt.resize_coeff(P_coef_vec);
-    double delta_t = resolution / 1.5;
+    double delta_t = resolution / 1;
     double t = delta_t;
     Eigen::Vector3d advancePos;
     for(int i = 0; i < polyCoeff.rows() / traj_opt.p_num; i++)
@@ -342,8 +342,15 @@ int AStarManager::safeCheck(Traj_opt &traj_opt) {
         while (t < traj_opt.time(i)) {
             advancePos = traj_opt.getPos(polyCoeff, i, t);
             if (is_obstacle(coord2idx(advancePos))) {
-                unsafe_segment = i;
-                break;
+                
+                if (skip_seg_num == 0) {
+                    unsafe_segment = i;
+                    break;
+                }
+                else {
+                    --skip_seg_num;
+                    break;
+                }
             }   
             t += delta_t;
         }
@@ -357,6 +364,32 @@ int AStarManager::safeCheck(Traj_opt &traj_opt) {
     return unsafe_segment;
 }
 
+// int AStarManager::safeCheckforFSM(Traj_opt &traj_opt) {
+//     int unsafe_segment = -1;        // -1表示多项式轨迹安全无碰撞
+//     std::vector<Eigen::VectorXd> P_coef_vec = traj_opt.P_coef_vec;
+//     Eigen::MatrixX3d polyCoeff = traj_opt.resize_coeff(P_coef_vec);
+//     double delta_t = resolution / 1;
+//     double t = delta_t;
+//     Eigen::Vector3d advancePos;
+//     for(int i = 0; i < polyCoeff.rows() / traj_opt.p_num; i++)
+//     {
+//         while (t < traj_opt.time(i)) {
+//             advancePos = traj_opt.getPos(polyCoeff, i, t);
+//             if (is_obstacle(coord2idx(advancePos))) {
+//                 unsafe_segment = i;
+//                 break;
+//             }   
+//             t += delta_t;
+//         }
+//         if (unsafe_segment != -1) {
+//             std::cout << "[FSM] segment " << i << " unsafe" << std::endl;
+//             break;
+//         } else {
+//             t = delta_t;
+//         }
+//     }
+//     return unsafe_segment;
+// }
 
 // 测试
 Eigen::Vector3d AStarManager::coordRounding(const Eigen::Vector3d &coord)

@@ -21,6 +21,8 @@ private:
     ros::Timer FSM_task_timer;
     ros::Subscriber pts_sub;
 
+    int skip_seg_num;    // 表示跳过的段数，因为如果连续插入中间点直到两点已经在A_star路径里连续，则即使出现碰撞也可以忽略，故跳过
+
     // ros::Subscriber odom_sub;
 public:
     STATE state;
@@ -33,6 +35,8 @@ public:
 
     void rcvWaypointsCallback(nav_msgs::PathConstPtr wp);
     // void rcvOdomCallback(nav_msgs::OdometryConstPtr msg);        // 用于获取轨迹规划的初始的pos，vel，和acc
-    bool trajGen();
+    bool trajGenVisPub();
     void emergencyStop();
+    std::vector<int> getPathIdx(const std::vector<Eigen::Vector3d> &path, const std::vector<Eigen::Vector3d> &path_main_point);
+
 };

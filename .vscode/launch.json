@@ -5,7 +5,7 @@
             "name": "ROS: Launch",
             "type": "ros",
             "request": "launch",
-            "target": "/home/nyf/Code/motion_planning_opt/src/grid_path_searcher/launch/demo.launch"
+            "target": "/home/nyf/Code/motion_planning/src/plan_manage/launch/simple_planner_sim.launch"
         }
     ]
 }

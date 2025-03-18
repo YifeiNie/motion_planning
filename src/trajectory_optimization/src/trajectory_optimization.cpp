@@ -8,7 +8,7 @@ void Traj_opt::init(ros::NodeHandle &nh)
     visualizer = std::make_unique<Visualizer>(nh);
     max_vel = nh.param("Opt/max_vel", 0.5);
     max_acc = nh.param("Opt/max_acc", 0.5);
-    order = nh.param("Opt/order", 4);
+    order = nh.param("Opt/order", ORDER);
     axis = nh.param("Opt/axis", 3);
 
     poly_order = 2 * order - 1;
@@ -262,7 +262,7 @@ void Traj_opt::Visualize(std::vector<Eigen::Vector3d> &path)
     traj.reserve(num_segments);
     for (int i = 0; i < num_segments; i++)
     {
-        traj.emplace_back(time(i), coef_mat_vis.block<8, 3>(8 * i, 0).transpose().rowwise().reverse());
+        traj.emplace_back(time(i), coef_mat_vis.block<2*ORDER, 3>(2 * ORDER * i, 0).transpose().rowwise().reverse());
     }
 
     int cols = path.size();

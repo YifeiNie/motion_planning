@@ -1,5 +1,6 @@
 #pragma once
 #include <Eigen/Eigen>
+#include <tuple>
 #include "trajectory_optimization.h"
 #include <sensor_msgs/PointCloud2.h>
 #include <pcl_conversions/pcl_conversions.h>
@@ -80,7 +81,8 @@ public:
     void setObs(const double coord_x, const double coord_y, const double coord_z);
     inline double calculate_d(const Eigen::Vector3d point_insert,const Eigen:: Vector3d point_st,const Eigen::Vector3d point_end);
     std::vector<Eigen::Vector3d> path_simplify(const std::vector<Eigen::Vector3d> &path);
-    int safeCheck(Traj_opt &traj_opt);
+    int safeCheck(Traj_opt &traj_opt, int skip_seg_num);
+    int safeCheckforFSM(Traj_opt &traj_opt);
     void reset_grid();
     void visGridPath(std::vector<Eigen::Vector3d> nodes, bool is_use_jps );
     void rcvPointCloudCallBack(sensor_msgs::PointCloud2ConstPtr pointcloud_map);

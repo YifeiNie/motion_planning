@@ -11,7 +11,9 @@
 #include "quad_msgs/Target.h"
 #include "quad_msgs/Des_target.h"
 
-    
+#define ORDER 3
+
+
 class Traj_opt{
 public:
     std::unique_ptr<Visualizer> visualizer;
@@ -56,7 +58,7 @@ public:
 
 private:
     
-    Trajectory<7> traj;
+    Trajectory<2*ORDER - 1> traj;
 
 };
 

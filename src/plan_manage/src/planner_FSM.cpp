@@ -12,6 +12,7 @@ void Plan_manage::FSM_task(const ros::TimerEvent &event)
 {
     bool is_suc;
     int unsafe_segment;
+    static int last_unsafe_segment;
 
     static int cnt = 0;
     ++cnt;
@@ -50,7 +51,7 @@ void Plan_manage::FSM_task(const ros::TimerEvent &event)
             break;
 
         case GEN_NEW_TRAJ:
-            is_suc = trajGen();
+            is_suc = trajGenVisPub();
             has_new_target = false;         // 标记当前target已被处理
             if (!is_suc) {                    
                 change_state(WAIT_TARGET);
@@ -64,15 +65,16 @@ void Plan_manage::FSM_task(const ros::TimerEvent &event)
 
         case EXEC_TRAJ:
             if (has_new_target) {
-                emergencyStop();
+                // emergencyStop();
                 change_state(GEN_NEW_TRAJ);
                 return;
             }
-
-            unsafe_segment = Astar_path_finder->safeCheck(*traj_opt);
+            // 需要增加保护多项式无法完全避免导致的锁死
+            unsafe_segment = Astar_path_finder->safeCheck(*traj_opt, skip_seg_num);
             if (unsafe_segment != -1) {
                 change_state(GEN_NEW_TRAJ);
-                emergencyStop();
+                // emergencyStop();
+                last_unsafe_segment = unsafe_segment;
                 return;
             }
             if ((traj_opt->odom_pos - target_pt).norm() < target_thresh) {    // 当前位置距离目标足够近，认为规划完成
@@ -115,6 +117,7 @@ void Plan_manage::init(ros::NodeHandle &nh)
     // odom_sub = nh.subscribe<nav_msgs::Odometry>("/vins_fusion/odometry", 1, boost::bind(&Plan_manage::rcvOdomCallback, this, _1));  
 
     state = INIT;
+    int skip_seg_num = 0; 
 }
 
 void Plan_manage::change_state(STATE new_state) {
@@ -127,9 +130,9 @@ void Plan_manage::print_state() {
   std::cout << "[State]: " + state_str[int(state)] << std::endl;
 }
 
-
-bool Plan_manage::trajGen()
+bool Plan_manage::trajGenVisPub()
 {
+    skip_seg_num = 0;
     // A_star寻路
     bool is_path_found = Astar_path_finder->A_star_search(traj_opt->odom_pos, target_pt);
     if (!is_path_found) {
@@ -137,30 +140,40 @@ bool Plan_manage::trajGen()
     }
     std::vector<Eigen::Vector3d> grid_path = Astar_path_finder->get_path();
     std::vector<Eigen::Vector3d> path_main_point = Astar_path_finder->path_simplify(grid_path);
+    std::vector<int> path_main_point_idx = getPathIdx(grid_path, path_main_point);
     Astar_path_finder->visGridPath(path_main_point, false);
+    
 
-    // // 轨迹优化和碰撞检测
+    // 轨迹优化和碰撞检测
     if (! traj_opt->optimize(path_main_point)) 
     {
         return false;
     }
-    int safecheck_iter = 0;
-    int unsafe_segment = Astar_path_finder->safeCheck(*traj_opt);
-    while (unsafe_segment != -1) {
 
-        if (safecheck_iter >= Astar_path_finder->max_safecheck_iter) { // 说明插入了很多也无法避免碰撞，只能忽略此处碰撞防止无限循环
-            break;  
+    int unsafe_segment = Astar_path_finder->safeCheck(*traj_opt, skip_seg_num);
+    while (unsafe_segment != -1) {
+        if (path_main_point_idx[unsafe_segment + 1] - path_main_point_idx[unsafe_segment] == 1) {  // 此时碰撞段的起点和终点已经在A_star路径里连续，无法中间插入，故忽略该段
+            ++skip_seg_num;
+            unsafe_segment = Astar_path_finder->safeCheck(*traj_opt, skip_seg_num);
+            continue;
         }
-        Eigen::Vector3d insert_point = (path_main_point[unsafe_segment] + path_main_point[unsafe_segment + 1]) / 2;
+        Eigen::Vector3d insert_point = grid_path[(path_main_point_idx[unsafe_segment + 1] + path_main_point_idx[unsafe_segment]) / 2];
         // 注意insert是在指定位置前插入，所以需要+1
         path_main_point.insert(path_main_point.begin() + unsafe_segment + 1, insert_point);
-        ++ safecheck_iter;
+        path_main_point_idx = getPathIdx(grid_path, path_main_point);           // 不要忘了这句话
         traj_opt->time = traj_opt->time_allocation(path_main_point);
         if (! traj_opt->optimize(path_main_point)) 
         {
             return false;
         }
-        unsafe_segment = Astar_path_finder->safeCheck(*traj_opt);
+        unsafe_segment = Astar_path_finder->safeCheck(*traj_opt, skip_seg_num);
+    }
+    for (size_t i = 0; i < path_main_point.size(); ++i) {
+        const Eigen::Vector3d& point = path_main_point[i];
+        std::cout << "Point " << i << ": (" 
+                    << point.x() << ", " 
+                    << point.y() << ", " 
+                    << point.z() << ")" << std::endl;
     }
     traj_opt->Visualize(path_main_point);
     return true;
@@ -183,4 +196,22 @@ void Plan_manage::emergencyStop() {
     quad_msgs::Target target;
     target.is_traj_safe = false;
     traj_opt->visualizer->target_pub.publish(target);
+}
+
+std::vector<int> Plan_manage::getPathIdx(const std::vector<Eigen::Vector3d> &path, const std::vector<Eigen::Vector3d> &path_main_point) 
+{
+    std::vector<int> path_main_point_idx_in_path;
+    for (int i = 0; i < path_main_point.size(); ++i) {
+        auto iter = std::find(path.begin(), path.end(), path_main_point[i]);
+        if (iter != path.end()) {
+            int idx = std::distance(path.begin(), iter);
+            path_main_point_idx_in_path.push_back(idx);
+        } else {
+            path_main_point_idx_in_path.clear();
+            path_main_point_idx_in_path.push_back(-1);
+            return path_main_point_idx_in_path;
+        }
+    }
+    // std::cout << "first idx is :" << path_main_point_idx_in_path[0] << std::endl;
+    return path_main_point_idx_in_path;
 }

@@ -17,7 +17,7 @@
         <param name="A_star/margin" value="0.0" />
         <param name="A_star/resolution" value="0.15" />
         <param name="A_star/path_resolution" value="0.1" />
-        <param name="A_star/max_safecheck_iter" value="4" />
+        <param name="A_star/max_safecheck_iter" value="5" />
         <param name="A_star/x_size" value="$(arg map_size_x)"/>
         <param name="A_star/y_size" value="$(arg map_size_y)"/>
         <param name="A_star/z_size" value="$(arg map_size_z)"/>
@@ -32,7 +32,7 @@
         <param name="grid_map/local_update_range_x"  value="5.5" /> 
         <param name="grid_map/local_update_range_y"  value="5.5" /> 
         <param name="grid_map/local_update_range_z"  value="4.5" /> 
-        <param name="grid_map/obstacles_inflation"     value="0.299" /> 
+        <param name="grid_map/obstacles_inflation"     value="0.1" /> 
         <param name="grid_map/local_map_margin" value="10"/>
         <param name="grid_map/ground_height"        value="-0.01"/>
         <!-- camera parameter -->

@@ -83,7 +83,7 @@ void rcvWaypointsCallback(const nav_msgs::Path & wp)
     // // 轨迹优化和碰撞检测
     traj_opt->optimize(path_main_point);
     int safecheck_iter = 0;
-    int unsafe_segment = Astar_path_finder->safeCheck(*traj_opt);
+    int unsafe_segment = Astar_path_finder->safeCheck(*traj_opt, 0);
 
     while (unsafe_segment != -1) {
 
@@ -96,7 +96,7 @@ void rcvWaypointsCallback(const nav_msgs::Path & wp)
         ++ safecheck_iter;
         traj_opt->time = traj_opt->time_allocation(path_main_point);
         traj_opt->optimize(path_main_point);
-        unsafe_segment = Astar_path_finder->safeCheck(*traj_opt);
+        unsafe_segment = Astar_path_finder->safeCheck(*traj_opt, 0);
     }
     traj_opt->Visualize(path_main_point);
     
@@ -166,7 +166,7 @@ int main(int argc, char** argv)
 {
     ros::init(argc, argv, "plan_manage");
     ros::NodeHandle nh("~");
-    _map_sub  = nh.subscribe( "/plan_manage/grid_map/occupancy_inflate", 1, rcvPointCloudCallBack);
+    // _map_sub  = nh.subscribe( "/plan_manage/grid_map/occupancy_inflate", 1, rcvPointCloudCallBack);
     // _pts_sub  = nh.subscribe( "waypoints", 1, rcvWaypointsCallback );
 
     _grid_map_vis_pub             = nh.advertise<sensor_msgs::PointCloud2>("grid_map_vis", 1);
