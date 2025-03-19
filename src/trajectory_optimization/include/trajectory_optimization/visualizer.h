@@ -137,6 +137,7 @@ public:
             trajectoryPub.publish(trajMarker);
             target.is_traj_safe = true;
             target_pub.publish(target);
+            std::cout << "size of traget is: " << target.pos.size() << std::endl;
         }
         else
         {

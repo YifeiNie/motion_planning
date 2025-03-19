@@ -12,7 +12,6 @@ void Plan_manage::FSM_task(const ros::TimerEvent &event)
 {
     bool is_suc;
     int unsafe_segment;
-    static int last_unsafe_segment;
 
     static int cnt = 0;
     ++cnt;
@@ -20,14 +19,6 @@ void Plan_manage::FSM_task(const ros::TimerEvent &event)
         print_state();
         cnt = 0; 
     }
-    // if (!has_odom) {
-    //     std::cout << "[Simple Planner] wait for odom." << std::endl;
-    // }
-        
-    // if (!has_new_target) {
-    //     std::cout << "wait for goal." << std::endl;
-    //     cnt = 0;
-    // }
 
     switch (state)
     {
@@ -69,12 +60,11 @@ void Plan_manage::FSM_task(const ros::TimerEvent &event)
                 change_state(GEN_NEW_TRAJ);
                 return;
             }
-            // 需要增加保护多项式无法完全避免导致的锁死
+
             unsafe_segment = Astar_path_finder->safeCheck(*traj_opt, skip_seg_num);
             if (unsafe_segment != -1) {
                 change_state(GEN_NEW_TRAJ);
                 // emergencyStop();
-                last_unsafe_segment = unsafe_segment;
                 return;
             }
             if ((traj_opt->odom_pos - target_pt).norm() < target_thresh) {    // 当前位置距离目标足够近，认为规划完成
@@ -83,9 +73,7 @@ void Plan_manage::FSM_task(const ros::TimerEvent &event)
                 std::cout << "Reach target!" << std::endl;
                 return;
             }
-            break;
-        case REPLAN_TRAJ:
-            break;            
+            break;       
         default:
             break;
     }
@@ -97,10 +85,7 @@ void Plan_manage::rcvWaypointsCallback(nav_msgs::PathConstPtr wp)
         ROS_WARN("Coordinate Z smaller than zero!!");
         return;
     }
-    // if (_has_map == false) {
-    //     ROS_WARN("No map!!");
-    //     return;
-    // }
+
     target_pt << wp->poses[0].pose.position.x,
                  wp->poses[0].pose.position.y,
                  wp->poses[0].pose.position.z;
@@ -127,7 +112,7 @@ void Plan_manage::change_state(STATE new_state) {
 }
 
 void Plan_manage::print_state() {
-  std::cout << "[State]: " + state_str[int(state)] << std::endl;
+    std::cout << "[State]: " + state_str[int(state)] << std::endl;
 }
 
 bool Plan_manage::trajGenVisPub()
@@ -168,29 +153,16 @@ bool Plan_manage::trajGenVisPub()
         }
         unsafe_segment = Astar_path_finder->safeCheck(*traj_opt, skip_seg_num);
     }
-    for (size_t i = 0; i < path_main_point.size(); ++i) {
-        const Eigen::Vector3d& point = path_main_point[i];
-        std::cout << "Point " << i << ": (" 
-                    << point.x() << ", " 
-                    << point.y() << ", " 
-                    << point.z() << ")" << std::endl;
-    }
+    // for (size_t i = 0; i < path_main_point.size(); ++i) {
+    //     const Eigen::Vector3d& point = path_main_point[i];
+    //     std::cout << "Point " << i << ": (" 
+    //                 << point.x() << ", " 
+    //                 << point.y() << ", " 
+    //                 << point.z() << ")" << std::endl;
+    // }
     traj_opt->Visualize(path_main_point);
     return true;
 }
-
-// void Plan_manage::rcvOdomCallback(nav_msgs::OdometryConstPtr msg)
-// {
-//     traj_opt->odom_pos(0) = msg->pose.pose.position.x;
-//     traj_opt->odom_pos(1) = msg->pose.pose.position.y;
-//     traj_opt->odom_pos(2) = msg->pose.pose.position.z;
-
-//     traj_opt->odom_vel(0) = msg->twist.twist.linear.x;
-//     traj_opt->odom_vel(1) = msg->twist.twist.linear.y;
-//     traj_opt->odom_vel(2) = msg->twist.twist.linear.z;
-
-//     traj_opt->has_odom = true;   
-// }
 
 void Plan_manage::emergencyStop() {
     quad_msgs::Target target;

@@ -1,0 +1,9 @@
+
+
+<launch>
+    <arg name="config_path" value="$(find bf_control)/config/3p5inch.yaml"/>
+    
+    <node pkg="bf_control" type="bf_control" name="offboard_node" output="screen">
+        <rosparam file="$(arg config_path)" command="load"/>
+    </node>
+</launch>
