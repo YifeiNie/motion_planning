@@ -97,6 +97,8 @@ void Topic_handler::rcvTargetCallback(quad_msgs::TargetConstPtr msg)
     this->is_traj_safe = msg->is_traj_safe;
     has_target = true;
     traj_size = pos_target.size();
+    traj_idx_iter = 1;
+    std::cout << "[Topic handler] Receive trajector! " << std::endl;
 }
 
 void Topic_handler::init(ros::NodeHandle& nh) {
@@ -108,4 +110,5 @@ void Topic_handler::init(ros::NodeHandle& nh) {
 
     mav_cmd_pub = nh.advertise<mavros_msgs::AttitudeTarget>("/mavros/setpoint_raw/attitude", 10);
     debug_flag = 1;
+    int traj_idx_iter = 0;
 }

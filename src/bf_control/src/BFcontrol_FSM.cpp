@@ -10,13 +10,11 @@
             change_state(MANUAL_CTRL); \
             break; \
         } \
-        traj_exec_cnt = 0;\
     } while (0)
 
 void BFcontrol_FSM::run(Topic_handler &th){
 
     ros::Time now_time = ros::Time::now();
-    static int traj_idx_iter = 0;
     static int traj_exec_cnt = 0;
 
     static int cnt = 0;
@@ -74,26 +72,37 @@ void BFcontrol_FSM::run(Topic_handler &th){
         case CMD_CTRL:
             OFFBOARD_SAFE_CHECK();
             if (th.rc.is_auto_land) {
+                traj_exec_cnt = 0;
+                th.traj_idx_iter = 0;
+                th.has_target = false;
                 change_state(AUTO_LAND);
                 break;
             }
             if (!th.is_traj_safe) {
                 pid.setDesire(th.odom.position.x(), th.odom.position.y(), pid.hover_height, th.odom.get_current_yaw());
+                traj_exec_cnt = 0;
+                th.traj_idx_iter = 0;
+                th.has_target = false;
                 change_state(HOVER);
+
                 break;
             }
-            if (traj_idx_iter == th.traj_size) {
+            if (th.traj_idx_iter == th.traj_size) {
+                traj_exec_cnt = 0;
+                th.traj_idx_iter = 0;
+                th.has_target = false;
                 change_state(HOVER);
                 break;
             }
             ++ traj_exec_cnt;
-            if (traj_exec_cnt >= 10) {
-                ++ traj_idx_iter; 
-                pid.setDesire(th.pos_target[traj_idx_iter].data[0], 
-                            th.pos_target[traj_idx_iter].data[1], 
-                            th.pos_target[traj_idx_iter].data[2], 
-                            th.yaw_target[traj_idx_iter].data[0]); 
+            if (traj_exec_cnt >= 9) {
+                ++ th.traj_idx_iter; 
+                pid.setDesire(th.pos_target[th.traj_idx_iter].data[0], 
+                            th.pos_target[th.traj_idx_iter].data[1], 
+                            th.pos_target[th.traj_idx_iter].data[2], 
+                            th.yaw_target[th.traj_idx_iter].data[0]); 
                 traj_exec_cnt = 0;
+                std::cout << "target pos is: " << th.pos_target[th.traj_idx_iter].data[0] << std::endl; 
             }
          
             pidProcess(th);

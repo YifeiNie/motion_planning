@@ -62,6 +62,7 @@ public:
     bool is_traj_safe;
     bool has_target;
     double traj_size;
+    int traj_idx_iter;
 
     ros::Timer exec_target;
     ros::Subscriber odom_sub;
