@@ -24,6 +24,10 @@
         <!-- <param name="A_star/delta_t" value="0.001"/> -->
 
         <param name="path/resolution"  value="0.15"/>
+        
+        <param name="plan/no_plan_thresh"  value="0.15"/>
+        <param name="plan/target_thresh"  value="0.1"/>
+        
 
         <param name="grid_map/resolution"      value="0.15" /> 
         <param name="grid_map/map_size_x"   value="$(arg map_size_x)" /> 
@@ -32,7 +36,7 @@
         <param name="grid_map/local_update_range_x"  value="5.5" /> 
         <param name="grid_map/local_update_range_y"  value="5.5" /> 
         <param name="grid_map/local_update_range_z"  value="4.5" /> 
-        <param name="grid_map/obstacles_inflation"     value="0.1" /> 
+        <param name="grid_map/obstacles_inflation"     value="0.05" /> 
         <param name="grid_map/local_map_margin" value="10"/>
         <param name="grid_map/ground_height"        value="-0.01"/>
         <!-- camera parameter -->

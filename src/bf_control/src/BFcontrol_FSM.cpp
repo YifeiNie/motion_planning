@@ -20,7 +20,7 @@ void BFcontrol_FSM::run(Topic_handler &th){
     static int cnt = 0;
     ++cnt;
     if (cnt >= 100) {
-        std::cout << "[State]: " + state_str[int(state)] << std::endl;
+        std::cout << "[BF control] state is: " + state_str[int(state)] << std::endl;
         cnt = 0; 
     }
 
@@ -87,10 +87,11 @@ void BFcontrol_FSM::run(Topic_handler &th){
 
                 break;
             }
-            if (th.traj_idx_iter == th.traj_size) {
+            if (th.traj_idx_iter >= th.traj_size - 1) {
                 traj_exec_cnt = 0;
                 th.traj_idx_iter = 0;
                 th.has_target = false;
+                std::cout << "[BF control] Reach the taget!" << std::endl;
                 change_state(HOVER);
                 break;
             }
@@ -98,11 +99,12 @@ void BFcontrol_FSM::run(Topic_handler &th){
             if (traj_exec_cnt >= 9) {
                 ++ th.traj_idx_iter; 
                 pid.setDesire(th.pos_target[th.traj_idx_iter].data[0], 
-                            th.pos_target[th.traj_idx_iter].data[1], 
-                            th.pos_target[th.traj_idx_iter].data[2], 
-                            th.yaw_target[th.traj_idx_iter].data[0]); 
+                              th.pos_target[th.traj_idx_iter].data[1], 
+                              th.pos_target[th.traj_idx_iter].data[2], 
+                              th.yaw_target[th.traj_idx_iter].data[0]); 
                 traj_exec_cnt = 0;
-                std::cout << "target pos is: " << th.pos_target[th.traj_idx_iter].data[0] << std::endl; 
+                // std::cout << "target pos x is: " << th.pos_target[th.traj_idx_iter].data[0] << std::endl; 
+                // std::cout << "the rest idx is: " << th.traj_idx_iter - th.traj_size << std::endl;
             }
          
             pidProcess(th);

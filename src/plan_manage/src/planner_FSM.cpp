@@ -95,8 +95,8 @@ void Plan_manage::rcvWaypointsCallback(nav_msgs::PathConstPtr wp)
 
 void Plan_manage::init(ros::NodeHandle &nh)
 {
-    no_plan_thresh = nh.param("Plam/no_plan_thresh", 0.01);
-    target_thresh = nh.param("Plam/target_thresh", 0.01);
+    no_plan_thresh = nh.param("Plan/no_plan_thresh", 0.2);
+    target_thresh = nh.param("Plan/target_thresh", 0.15);
     pts_sub  = nh.subscribe<nav_msgs::Path>( "waypoints", 1, boost::bind(&Plan_manage::rcvWaypointsCallback, this, _1 ));
     FSM_task_timer = nh.createTimer(ros::Duration(0.01), boost::bind(&Plan_manage::FSM_task, this, _1));
     // odom_sub = nh.subscribe<nav_msgs::Odometry>("/vins_fusion/odometry", 1, boost::bind(&Plan_manage::rcvOdomCallback, this, _1));  
@@ -112,7 +112,12 @@ void Plan_manage::change_state(STATE new_state) {
 }
 
 void Plan_manage::print_state() {
-    std::cout << "[State]: " + state_str[int(state)] << std::endl;
+    if (state == EXEC_TRAJ) {
+        std::cout << "[State]: " + state_str[int(state)] << ", " <<  (traj_opt->odom_pos - target_pt).norm() << "m to target" << std::endl;
+    }
+    else {
+        std::cout << "[State]: " + state_str[int(state)] << std::endl;
+    }
 }
 
 bool Plan_manage::trajGenVisPub()
