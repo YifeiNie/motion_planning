@@ -16,9 +16,9 @@ void BFcontrol_FSM::run(Topic_handler &th){
 
     ros::Time now_time = ros::Time::now();
     static int traj_exec_cnt = 0;
-
+    static double takeofff_sum;
     static int cnt = 0;
-    ++cnt;
+    ++ cnt;
     if (cnt >= 100) {
         std::cout << "[BF control] state is: " + state_str[int(state)] << std::endl;
         cnt = 0; 
@@ -37,23 +37,33 @@ void BFcontrol_FSM::run(Topic_handler &th){
                 break;
             }
             if ((abs(th.odom.position.z() - 0) < 0.06) && (th.rc.is_offboard)) {
+                pid.reset();
+                pid.setDesire(th.odom.position.x(), 
+                              th.odom.position.y(), 
+                              th.odom.position.z(), 
+                              th.odom.get_current_yaw());                
                 change_state(AUTO_TAKEOFF);
                 break;
             }
             if ((abs(th.odom.position.z() - 0) > 0.06) && (th.rc.is_offboard)) {
-                std::cout << "UAV not on land or odom drift, cannot enter offboard mode!" << std::endl;
+                std::cout << "[BF control] UAV not on land or odom drift, cannot enter offboard mode!" << std::endl;
             }
 
             break;
 
         case AUTO_TAKEOFF:
             OFFBOARD_SAFE_CHECK();
-            pid.reset();
-            pid.setDesire(th.odom.position.x(), 
-                          th.odom.position.y(), 
-                          th.odom.position.z() + pid.hover_height, 
-                          th.odom.get_current_yaw());
-            change_state(HOVER);
+            std::cout << "[BF control] Take off!" << std::endl;
+
+            if (takeofff_sum <= pid.hover_height && abs(th.odom.position.z() - pid.hover_height) >= 0.08 ) {
+                takeofff_sum = takeofff_sum + 0.005;
+                pid.desire_position.z() = pid.desire_position.z() + takeofff_sum;
+            }
+            else {
+                change_state(HOVER);
+                break;
+            }
+            pidProcess(th);
             break;
 
 
@@ -112,7 +122,7 @@ void BFcontrol_FSM::run(Topic_handler &th){
 
         case AUTO_LAND:
             OFFBOARD_SAFE_CHECK();
-            pid.desire_position.z() = pid.desire_position.z() - 0.0005;
+            pid.desire_position.z() = pid.desire_position.z() - 0.008;
             pidProcess(th);
 
             if (th.odom.position.z() <= -0.2 && !th.rc.is_offboard && !th.rc.is_armed) {
@@ -120,38 +130,8 @@ void BFcontrol_FSM::run(Topic_handler &th){
                 break;
             }
             break;
-
-        // case MANUAL_CTRL:
-        //     if (!th.rc.is_armed) {
-        //         change_state(INIT);
-        //         break;
-        //     }
-        //     pid.reset();
-        //     ROS_INFO("is_armed = %d", th.rc.is_armed);
-        //     ROS_INFO("is_offboard = %d", th.rc.is_offboard);
-        //     if(th.rc.is_offboard){
-        //         pid.reset();
-        //         pid.desire_position = th.odom.position;
-        //         pid.desire_position[2] += 0.4;
-        //         pid.desire_yaw = th.odom.get_current_yaw();
-        //         change_state(CMD_CTRL);
-        //     }
-        //     break;
-        // case CMD_CTRL:
-        //     if (!th.rc.is_armed) {
-        //         change_state(INIT);
-        //     }
-        //     if(!(th.rc.is_offboard)){
-        //         pid.reset();
-        //         change_state(MANUAL_CTRL);
-        //     }
-        //     else{
-        //         pid.outer_position_loop(th);
-        //         pid.inner_velocity_loop(th);
-        //         th.mav_cmd_pub.publish(pid.att_cmd_msg);
-        //         printCmd();
-        //     }
-        //     break;
+        default :
+            break;
     }
 
 }

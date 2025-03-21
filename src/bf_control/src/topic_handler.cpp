@@ -35,7 +35,7 @@ void RC::feed(mavros_msgs::RCInConstPtr msg){
         is_offboard = 0;
     }
 
-    if (msg->channels[6] > 1400 && msg->channels[1600]){
+    if (msg->channels[6] > 1400 && msg->channels[6] < 1600){
         is_auto_land = 1;
     }else{
         is_auto_land = 0;

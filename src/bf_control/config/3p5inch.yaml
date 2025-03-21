@@ -46,4 +46,4 @@ Lowpass_filter:
 Drone:
   mass : 0.305
   g : 9.80665
-  balance_thrust : 0.30
+  balance_thrust : 0.3
