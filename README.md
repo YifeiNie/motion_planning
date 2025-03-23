@@ -17,7 +17,7 @@
 ###
 - 一定要使用[GPU版本的Vins-Fusion](https://github.com/pjrambo/VINS-Fusion-gpu)，否则使用CPU版本的漂移非常严重导致经常炸机，下面是配置步骤
   - 配置GPU版本的OpenCV
-    - 下载[OpenCV源码](https://github.com/opencv/opencv), 和[OpenCV_contrib源码](https://github.com/opencv/opencv_contrib)，并放在统一目录下
+    - 下载[OpenCV源码](https://github.com/opencv/opencv), 和[OpenCV_contrib源码](https://github.com/opencv/opencv_contrib)，并放在同一目录下
     - 终端进入OpenCV目录，`mkdir build && cd build`，然后使用cmake进行构建：
     ```cmake -D CMAKE_BUILD_TYPE=RELEASE \
         -D CMAKE_INSTALL_PREFIX=/usr/local/ \
