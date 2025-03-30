@@ -1,9 +1,9 @@
 PID:
-  Kp_x : 1.5
-  Kp_y : 1.5
-  Kp_z : 2.2
-  Kp_vx : 0.2
-  Kp_vy : 0.2
+  Kp_x : 1.3
+  Kp_y : 1.3
+  Kp_z : 2.1
+  Kp_vx : 0.22
+  Kp_vy : 0.22
   Kp_vz : 0.08
 
   Ki_x : 0.012

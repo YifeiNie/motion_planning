@@ -14,16 +14,16 @@
 
 void BFcontrol_FSM::run(Topic_handler &th){
 
-    ros::Time now_time = ros::Time::now();
+    // ros::Time now_time = ros::Time::now();
     static int traj_exec_cnt = 0;
     static double takeofff_sum;
     static int cnt = 0;
     ++ cnt;
-    if (cnt >= 50) {
+    if (cnt >= 60) {
         std::cout << "[BF control] state is: " + state_str[int(state)] << std::endl;
         std::cout << "desire is: \n" << pid.desire_position << "\r" << std::endl;
         std::cout << "error is: \n" << pid.desire_position - th.odom.position << std::endl;
-        std::cout << "takeoff sum is: \r\n" << takeofff_sum << std::endl;
+        // std::cout << "takeoff sum is: \r\n" << takeofff_sum << std::endl;
         cnt = 0; 
     }
 
@@ -74,11 +74,15 @@ void BFcontrol_FSM::run(Topic_handler &th){
         case HOVER:
             OFFBOARD_SAFE_CHECK();
             if (th.rc.is_auto_land) {
+                pid.setDesire(th.odom.position.x(), 
+                              th.odom.position.y(), 
+                              th.odom.position.z(), 
+                              th.odom.get_current_yaw());
                 change_state(AUTO_LAND);
                 break;
             }
             pidProcess(th);
-            if ((abs(th.odom.position.z() - pid.desire_position.z()) < 0.08) && th.has_target) {
+            if ((abs(th.odom.position.z() - pid.desire_position.z()) < 1.08) && th.has_target) {
                 change_state(CMD_CTRL);
             }
             break;
@@ -89,6 +93,10 @@ void BFcontrol_FSM::run(Topic_handler &th){
                 traj_exec_cnt = 0;
                 th.traj_idx_iter = 0;
                 th.has_target = false;
+                pid.setDesire(th.odom.position.x(), 
+                              th.odom.position.y(), 
+                              th.odom.position.z(), 
+                              th.odom.get_current_yaw());
                 change_state(AUTO_LAND);
                 break;
             }
@@ -110,7 +118,7 @@ void BFcontrol_FSM::run(Topic_handler &th){
                 break;
             }
             ++ traj_exec_cnt;
-            if (traj_exec_cnt >= 9) {
+            if (traj_exec_cnt >= 2) {
                 ++ th.traj_idx_iter; 
                 pid.setDesire(th.pos_target[th.traj_idx_iter].data[0], 
                               th.pos_target[th.traj_idx_iter].data[1], 
