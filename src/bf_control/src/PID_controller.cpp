@@ -151,7 +151,7 @@ void PID_controller::inner_velocity_loop(Topic_handler& th){
     att_cmd_msg.type_mask = 4;
     att_cmd_msg.body_rate.x = -temp_y_out * RAD2DEG;
     att_cmd_msg.body_rate.y = temp_x_out * RAD2DEG;
-    att_cmd_msg.body_rate.z = temp_yaw_out;
+    att_cmd_msg.body_rate.z = temp_yaw_out * RAD2DEG;
     att_cmd_msg.thrust = temp_thrust_out;
     // if(abs(att_cmd_msg.thrust) <= 0.01){
     //     att_cmd_msg.thrust = 0;

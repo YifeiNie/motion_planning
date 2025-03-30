@@ -19,8 +19,11 @@ void BFcontrol_FSM::run(Topic_handler &th){
     static double takeofff_sum;
     static int cnt = 0;
     ++ cnt;
-    if (cnt >= 100) {
+    if (cnt >= 50) {
         std::cout << "[BF control] state is: " + state_str[int(state)] << std::endl;
+        std::cout << "desire is: \n" << pid.desire_position << "\r" << std::endl;
+        std::cout << "error is: \n" << pid.desire_position - th.odom.position << std::endl;
+        std::cout << "takeoff sum is: \r\n" << takeofff_sum << std::endl;
         cnt = 0; 
     }
 
@@ -53,13 +56,14 @@ void BFcontrol_FSM::run(Topic_handler &th){
 
         case AUTO_TAKEOFF:
             OFFBOARD_SAFE_CHECK();
-            std::cout << "[BF control] Take off!" << std::endl;
+            // std::cout << "[BF control] Take off!" << std::endl;
 
-            if (takeofff_sum <= pid.hover_height && abs(th.odom.position.z() - pid.hover_height) >= 0.08 ) {
+            if (takeofff_sum <= pid.hover_height && pid.hover_height - th.odom.position.z() >= 0.06 ) {
                 takeofff_sum = takeofff_sum + 0.005;
-                pid.desire_position.z() = pid.desire_position.z() + takeofff_sum;
+                pid.desire_position.z() = takeofff_sum;
             }
             else {
+                takeofff_sum = 0;
                 change_state(HOVER);
                 break;
             }

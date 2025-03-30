@@ -19,7 +19,7 @@ PID:
   Kd_vx : 0
   Kd_vy : 0
   Kd_vz : 0
-  K_yaw : 6.0
+  K_yaw : 2.0
 
   position_x_i_bound : 1.0
   position_y_i_bound : 1.0
@@ -27,9 +27,10 @@ PID:
   velocity_x_i_bound : 0.8
   velocity_y_i_bound : 0.8
   velocity_z_i_bound : 0.8
-  thrust_bound : 0.36
+  thrust_bound : 0.35
   x_bound : 0.3
   y_bound : 0.3
+  hover_height : 0.4
 
 # 单环PID混合控制
 PID_single:
