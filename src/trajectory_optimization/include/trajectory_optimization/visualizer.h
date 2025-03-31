@@ -85,7 +85,7 @@ public:
 
         if (traj.getPieceNum() > 0)
         {
-            const double T = std::min(0.01, traj.getTotalDuration() / 1000);
+            const double T = std::min(0.01, traj.getTotalDuration() / 2000);
             Eigen::Vector3d lastPos = traj.getPos(0.0);
             for (double t = T; t < traj.getTotalDuration(); t += T)
             {

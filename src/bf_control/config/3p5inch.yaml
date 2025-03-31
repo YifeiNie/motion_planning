@@ -1,13 +1,13 @@
 PID:
   Kp_x : 1.3
   Kp_y : 1.3
-  Kp_z : 2.1
+  Kp_z : 2.2
   Kp_vx : 0.22
   Kp_vy : 0.22
   Kp_vz : 0.08
 
-  Ki_x : 0.012
-  Ki_y : 0.012
+  Ki_x : 0.015
+  Ki_y : 0.015
   Ki_z : 0.03
   Ki_vx : 0.0
   Ki_vy : 0.0
@@ -30,7 +30,7 @@ PID:
   thrust_bound : 0.35
   x_bound : 0.3
   y_bound : 0.3
-  hover_height : 0.4
+  hover_height : 0.5
 
 # 单环PID混合控制
 PID_single:

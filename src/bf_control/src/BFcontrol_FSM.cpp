@@ -120,7 +120,7 @@ void BFcontrol_FSM::run(Topic_handler &th){
             ++ traj_exec_cnt;
             if (traj_exec_cnt >= 2) {
                 ++ th.traj_idx_iter; 
-                pid.setDesire(th.pos_target[th.traj_idx_iter].data[0], 
+                pid.setDesire(-th.pos_target[th.traj_idx_iter].data[0], 
                               th.pos_target[th.traj_idx_iter].data[1], 
                               th.pos_target[th.traj_idx_iter].data[2], 
                               th.yaw_target[th.traj_idx_iter].data[0]); 
