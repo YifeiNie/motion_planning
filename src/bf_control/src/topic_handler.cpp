@@ -103,12 +103,12 @@ void Topic_handler::rcvTargetCallback(quad_msgs::TargetConstPtr msg)
 
 void Topic_handler::init(ros::NodeHandle& nh) {
 
-    odom_sub = nh.subscribe<nav_msgs::Odometry>("/vins_fusion/odometry", 10, boost::bind(&Odom::feed, &(this->odom), _1));
+    odom_sub = nh.subscribe<nav_msgs::Odometry>("/vins_fusion/imu_propagate", 10, boost::bind(&Odom::feed, &(this->odom), _1));
     rc_sub = nh.subscribe<mavros_msgs::RCIn>("/mavros/rc/in", 10, boost::bind(&RC::feed, &(this->rc), _1));
     imu_sub = nh.subscribe<sensor_msgs::Imu>("/mavros/imu/data", 10, boost::bind(&Imu::feed, &(this->imu), _1));
     target_sub = nh.subscribe<quad_msgs::Target>("/target", 1, boost::bind(&Topic_handler::rcvTargetCallback, this, _1));
 
-    mav_cmd_pub = nh.advertise<mavros_msgs::AttitudeTarget>("/mavros/setpoint_raw/attitude", 10);
+    mav_cmd_pub = nh.advertise<mavros_msgs::AttitudeTarget>("/mavros/setpoint_raw/attitude", 5);
     debug_flag = 1;
     int traj_idx_iter = 0;
 }

@@ -15,9 +15,9 @@ int main(int argc, char **argv){
     ros::Rate rate(CTRL_FREQUENCY);
     ROS_INFO("offboard_node is running");
     while (ros::ok()){
-        rate.sleep();
         ros::spinOnce();
         fsm.run(th);
+        rate.sleep();
     }
     return 0;
 }

@@ -19,16 +19,26 @@ void BFcontrol_FSM::run(Topic_handler &th){
     static double takeofff_sum;
     static int cnt = 0;
     ++ cnt;
-    if (cnt >= 60) {
+    if (cnt >= 10) {
         std::cout << "[BF control] state is: " + state_str[int(state)] << std::endl;
-        std::cout << "desire is: \n" << pid.desire_position << "\r" << std::endl;
-        std::cout << "error is: \n" << pid.desire_position - th.odom.position << std::endl;
-        // std::cout << "takeoff sum is: \r\n" << takeofff_sum << std::endl;
-        cnt = 0; 
+
+        std::cout << "t is: " << pid.att_cmd_msg.thrust << std::endl;
+        std::cout << "roll  is: " << pid.att_cmd_msg.body_rate.x << std::endl;
+        std::cout << "pitch is: " << pid.att_cmd_msg.body_rate.y << std::endl;
+        std::cout << "yaw   is: " << pid.att_cmd_msg.body_rate.z << std::endl;
+        std::cout << "des pos z is: " << pid.desire_position.z() << std::endl;
+        std::cout << "cur pos z is: " << th.odom.position.z() << std::endl;
+        // std::cout << "des vel z is: " << pid.desire_velocity.z() << std::endl;
+        // std::cout << "cur vel z is: " << th.odom.velocity.z() << std::endl;
+        std::cout << "t is: " << pid.att_cmd_msg.thrust << std::endl;
+        std::cout << "" << std::endl;
+        cnt = 0;
     }
 
     switch (state){
         case INIT:
+            pid.reset();
+            th.mav_cmd_pub.publish(pid.att_cmd_msg);
             if (th.rc.is_armed) {
                 change_state(MANUAL_CTRL);
             }
@@ -43,7 +53,7 @@ void BFcontrol_FSM::run(Topic_handler &th){
                 pid.reset();
                 pid.setDesire(th.odom.position.x(), 
                               th.odom.position.y(), 
-                              th.odom.position.z(), 
+                              pid.hover_height, 
                               th.odom.get_current_yaw());                
                 change_state(AUTO_TAKEOFF);
                 break;
@@ -73,16 +83,16 @@ void BFcontrol_FSM::run(Topic_handler &th){
 
         case HOVER:
             OFFBOARD_SAFE_CHECK();
-            if (th.rc.is_auto_land) {
-                pid.setDesire(th.odom.position.x(), 
-                              th.odom.position.y(), 
-                              th.odom.position.z(), 
-                              th.odom.get_current_yaw());
-                change_state(AUTO_LAND);
-                break;
-            }
+            // if (th.rc.is_auto_land) {
+            //     pid.setDesire(th.odom.position.x(), 
+            //                   th.odom.position.y(), 
+            //                   th.odom.position.z(), 
+            //                   th.odom.get_current_yaw());
+            //     change_state(AUTO_LAND);
+            //     break;
+            // }
             pidProcess(th);
-            if ((abs(th.odom.position.z() - pid.desire_position.z()) < 1.08) && th.has_target) {
+            if ((abs(th.odom.position.z() - pid.desire_position.z()) < 0.06) && th.has_target) {
                 change_state(CMD_CTRL);
             }
             break;

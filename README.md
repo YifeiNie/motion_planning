@@ -82,3 +82,5 @@
     - 使用catkin_make编译
     - 修改yaml文件，增加以下两句启用GPU加速`use_gpu: 1`和`use_gpu_acc_flow: 1`
     
+###
+  自动起飞时要保证油门上锁，且拨杆没有处于offboard模式
